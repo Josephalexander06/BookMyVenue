@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 
 class Venue(BaseModel):
     name : str
@@ -16,13 +17,26 @@ class CreateVenue(Venue):
 
 
 class User(BaseModel):
-    name : str
-    phone_no : int
-    default_city : str | None  = None
-
+    phone_no : str
     class Config:
         from_attributes = True
 
 class CreateUser(User):
     class Config:
         from_attributes = True
+
+class OTP(BaseModel):
+    phone_no : str
+    otp : str
+    class Config:
+        from_attributes = True
+
+
+class Settings(BaseSettings):
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = 'utf-8'
+

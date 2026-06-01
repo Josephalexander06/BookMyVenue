@@ -1,8 +1,20 @@
 from sqlalchemy import create_engine
+from fastapi import FastAPI, Depends
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from .config import Settings
+from functools import lru_cache
+from dotenv import load_dotenv
+import os
 
-SQLALCHEMY_DATABASE  = "postgresql://postgres:123456@localhost/bookmyvenue"
+load_dotenv()
+app = FastAPI()
+
+@lru_cache
+def get_settings():
+    return Settings()
+
+SQLALCHEMY_DATABASE  = os.environ['DATABASE_URL']
 
 engine = create_engine(SQLALCHEMY_DATABASE)
 
