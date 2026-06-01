@@ -9,12 +9,12 @@ from .auth import get_current_user
 
 router = APIRouter(
     prefix="/Venues",
-    tags=["venue"]
+    tags=["Venue"]
 )
 
 
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=CreateVenue)
-async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),):
+async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),current_user:int = Depends(get_current_user)):
     new_venue = models.Venue(**Venues.dict())
     db.add(new_venue)
     db.commit()
@@ -23,12 +23,12 @@ async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),):
     return [new_venue]
 
 @router.get("/",status_code=status.HTTP_200_OK,response_model=List[CreateVenue])
-async def get_venue(db:Session=Depends(get_db),current_user:int = Depends(get_current_user)):
+async def get_venue(db:Session=Depends(get_db)):
     venues  = db.query(models.Venue).all()
     return venues
 
 @router.get("/{id}",status_code=status.HTTP_200_OK,response_model=CreateVenue)
-async def get_venues(id:int,db: Session = Depends(get_db)):
+async def get_venues(id:int,db: Session = Depends(get_db),current_user:int = Depends(get_current_user)):
     # print(id)
 
     venue = db.query(models.Venue).filter(models.Venue.id == id).first()

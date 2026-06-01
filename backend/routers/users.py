@@ -66,10 +66,10 @@ async def check_otp(payload:OTP,db:Session=Depends(get_db)):
     verify_otp(payload.phone_no,payload.otp,db)
 
     db_user = db.query(User).filter(User.phone_number == payload.phone_no).first()
-
     if not db_user:
         db_user = User(
-            phone_number = payload.phone_no
+            phone_number = payload.phone_no,
+            is_verified = True
         )
         db.add(db_user)
         db.commit()
