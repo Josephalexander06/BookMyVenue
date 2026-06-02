@@ -3,9 +3,8 @@ from pydantic_settings import BaseSettings
 
 class Venue(BaseModel):
     name : str
-    location : str
+    address : str
     price : float
-    availability : bool = True
     capacity : int | None = None
 
     class Config:
@@ -41,6 +40,3 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = 'utf-8'
-
-
-

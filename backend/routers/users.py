@@ -1,10 +1,11 @@
 from fastapi import Depends,status,HTTPException,APIRouter
 from utils.db_helper import get_db
-from utils.schema import CreateUser,OTP
+from utils.schema import CreateUser,OTP,UserOut
 from utils.config import settings
 from models import OTPVerification,User
 from sqlalchemy.orm import Session
 from jose import jwt
+from .auth  import get_current_user
 from datetime import datetime,timedelta
 from passlib.context import CryptContext
 import random
@@ -93,12 +94,14 @@ async def check_otp(payload:OTP,db:Session=Depends(get_db)):
     
       
 
-@router.get("/user/{id}",status_code=status.HTTP_200_OK,response_model=CreateUser)
-async def get_user(id:int,db: Session = Depends(get_db)):
-    # print(id)
+@router.get("/user/{id}",status_code=status.HTTP_200_OK,response_model=UserOut)
+async def get_user_with_venue(id:int,db: Session = Depends(get_db),cuurent_user : int = Depends(get_current_user)):
+    print(id)
 
     user = db.query(User).filter(User.id == id).first()
     if not user:
         raise HTTPException(status_code=404,detail="user Not Found")
     
     return user
+
+

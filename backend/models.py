@@ -1,17 +1,21 @@
 from utils.db_helper import Base
-from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime, Enum
-import enum
+from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+
 
 class Venue(Base):
-    __tablename__ =   "Venues"
+    __tablename__ =   "venues"
 
     id = Column(Integer,primary_key=True,nullable=False)
     name = Column(String,nullable=False)
-    location = Column(String,nullable=False)
+    address = Column(String,nullable=False)
     price = Column(Float,nullable=False)
     capacity = Column(Integer,nullable=True)
     availability = Column(Boolean,server_default='TRUE')
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
+    owner_id = Column(Integer,ForeignKey("users.id", ondelete="CASCADE"),nullable=False)
+
+    owner  = relationship("User",back_populates="venues")
 
 class User(Base):
     __tablename__ =   "users"
@@ -22,6 +26,8 @@ class User(Base):
     account_status = Column(Boolean,server_default='TRUE')
     role = Column(String, nullable=False, default="customer")
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
+
+    venues = relationship("Venue",back_populates="owner",cascade="all,delete")
 
 class OTPVerification(Base):
     __tablename__ = "otp_verification"
