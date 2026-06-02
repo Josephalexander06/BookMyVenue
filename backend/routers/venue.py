@@ -1,9 +1,10 @@
 from fastapi import Depends,status,HTTPException,Response,APIRouter
 from utils.db_helper import get_db
-from utils.schema import CreateVenue
+from utils.schema import CreateVenue, GetVenue
 import models
 from sqlalchemy.orm import Session
 from typing import List
+from .users import access_required
 
 from .auth import get_current_user
 
@@ -11,23 +12,6 @@ router = APIRouter(
     prefix="/venues",
     tags=["Venue"]
 )
-
-
-def access_required(current_user : tuple = Depends(get_current_user)):
-    allowed_roles  ={'owner','admin'}
-
-    if current_user[1] not in allowed_roles:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Access Required")
-
-    return current_user
-
-
-
-def admin_required(current_user : int = Depends(get_current_user)):
-    if current_user[1] != 'admin':
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Access Required")
-    return current_user
-
 
 
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[CreateVenue])
@@ -43,7 +27,7 @@ async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),current_use
 
 
 
-@router.get("/Venue",status_code=status.HTTP_200_OK,response_model=List[CreateVenue])
+@router.get("/Venue",status_code=status.HTTP_200_OK,response_model=List[GetVenue])
 async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(get_current_user)):
     id = current_user[0]
     venues  = db.query(models.Venue).filter(models.Venue.owner_id == id).all()

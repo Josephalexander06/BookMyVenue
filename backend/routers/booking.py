@@ -2,9 +2,10 @@ from fastapi import Depends,APIRouter,status, HTTPException
 from .auth import get_current_user
 from utils.db_helper import get_db
 from sqlalchemy.orm import Session
-from utils.schema import Bookings
-import models 
+from utils.schema import Bookings, Booking_Owner
+from models import Booking, Venue
 from pydantic import field_validator
+from .users import access_required,admin_required
 from datetime import date,datetime
 from zoneinfo import ZoneInfo
 
@@ -20,7 +21,7 @@ ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=Bookings)
 def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
     
-    v_id = db.query(models.Venue).filter(models.Venue.name == book.name).first()
+    v_id = db.query(Venue).filter(Venue.name == book.name).first()
 
     if v_id is None:
         raise HTTPException(status_code=404,detail="Venue not found")
@@ -29,7 +30,7 @@ def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int
     if book.booking_date < today:
         raise HTTPException(status_code=404,detail="Cant book older date")
     
-    new_booking = models.Booking(
+    new_booking = Booking(
         user_id = current_user[0],
         venue_id = v_id.id,
         booking_date = book.booking_date,
@@ -41,3 +42,57 @@ def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int
     db.refresh(new_booking)
 
     return new_booking
+
+@router.get("/",response_model=list[Booking_Owner])
+def recieved_request(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+
+    bookings = db.query(Booking,Venue).join(Venue,Booking.venue_id == Venue.id).filter(Venue.owner_id == current_user[0]).all()
+
+    result = []
+
+    for booking,venue in bookings:
+        result.append({
+            "name":venue.name,
+            "booking_date":booking.booking_date,
+            "status":booking.status
+        })
+    
+    return result
+
+@router.patch("/{id}/approve")
+def booking_approvel(id : int,db:Session=Depends(get_db),current_user : int = Depends(access_required)):
+
+    booking_approval = db.query(Booking).filter(Booking.id == id).first()
+    booking_approval.status = "APPROVED"
+    db.commit()
+
+    return {"updated"}
+
+
+@router.patch("/{id}/reject")
+def booking_rejection(id : int,db:Session=Depends(get_db),current_user : int = Depends(access_required)):
+
+    booking_approval = db.query(Booking).filter(Booking.id == id).first()
+    booking_approval.status = "REJECTED"
+    db.commit()
+
+    return {"updated"}
+
+
+@router.get("/mybooking")
+def my_bookings(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+
+    bookings = db.query(Booking,Venue).join(Venue,Booking.venue_id == Venue.id).filter(Booking.user_id == current_user[0]).all()
+    
+    result = []
+
+    for book,venue in bookings:
+        if book.status == "APPROVED":
+            result.append({
+                "name":venue.name,
+                "address":venue.address,
+                "booking_date":book.booking_date,
+                "status":book.status
+            })
+
+    return result

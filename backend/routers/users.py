@@ -1,8 +1,8 @@
 from fastapi import Depends,status,HTTPException,APIRouter
 from utils.db_helper import get_db
-from utils.schema import CreateUser,OTP, Booking_Owner
+from utils.schema import CreateUser,OTP, Bookings, Venue
 from utils.config import settings
-from models import OTPVerification,User, Booking, Venue
+from models import OTPVerification,User
 from sqlalchemy.orm import Session
 from jose import jwt
 from .auth  import get_current_user
@@ -17,7 +17,24 @@ router = APIRouter(
     prefix="/user",
     tags=["User"]
 )
+
 pwd_content = CryptContext(schemes=["bcrypt"],deprecated ="auto")
+
+def access_required(current_user : tuple = Depends(get_current_user)):
+    allowed_roles  ={'owner','admin'}
+
+    if current_user[1] not in allowed_roles:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Access Required")
+
+    return current_user
+
+
+
+def admin_required(current_user : int = Depends(get_current_user)):
+    if current_user[1] != 'admin':
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Access Required")
+    return current_user
+
 
 ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
 
@@ -25,9 +42,7 @@ ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
 def send_otp_verification(phone_number:str,db:Session):
     otp = str(random.randint(100000,999999))
     expire_at = ist_now + timedelta(minutes=5)
-    # print(otp)
-    safe_otp = otp[:72] 
-    otp_hashed =  pwd_content.hash(safe_otp)
+    otp_hashed =  pwd_content.hash(otp)
     otp_record = OTPVerification(
         phone_number = phone_number,
         otp_hash = otp_hashed,
@@ -110,18 +125,4 @@ async def get_user(db: Session = Depends(get_db),current_user : int = Depends(ge
     return {"phone_number":users.phone_number}
 
 
-@router.get("/bookings",response_model=list[Booking_Owner])
-def recieved_request(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
 
-    bookings = db.query(Booking,Venue).join(Venue,Booking.venue_id == Venue.id).filter(Venue.owner_id == current_user[0]).all()
-
-    result = []
-
-    for booking,venue in bookings:
-        result.append({
-            "name":venue.name,
-            "booking_date":booking.booking_date,
-            "status":booking.status
-        })
-    
-    return result

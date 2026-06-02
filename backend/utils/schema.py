@@ -17,6 +17,11 @@ class CreateVenue(Venue):
     class Config:
         from_attributes = True
 
+class GetVenue(Venue):
+    id : int
+    class Config:
+        from_attributes = True
+
 
 class User(BaseModel):
     phone_no : str
@@ -30,7 +35,6 @@ class CreateUser(User):
 class OTP(BaseModel):
     phone_no : str
     otp : str
-    is_verified : bool = False
     class Config:
         from_attributes = True
 
