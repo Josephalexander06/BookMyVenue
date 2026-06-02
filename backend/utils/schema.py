@@ -1,5 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 from pydantic_settings import BaseSettings
+from datetime import datetime,date
+from typing import Optional
+
 
 class Venue(BaseModel):
     name : str
@@ -17,7 +20,6 @@ class CreateVenue(Venue):
 
 class User(BaseModel):
     phone_no : str
-    
     class Config:
         from_attributes = True
 
@@ -40,3 +42,13 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = 'utf-8'
+
+class Bookings(BaseModel):
+       name : Optional[str] = None
+       booking_date : date 
+       class Config:
+        from_attributes = True
+    
+class Booking_Owner(Bookings):
+    status : str
+

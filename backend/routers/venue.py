@@ -1,6 +1,6 @@
 from fastapi import Depends,status,HTTPException,Response,APIRouter
 from utils.db_helper import get_db
-from utils.schema import CreateVenue, UserOut
+from utils.schema import CreateVenue
 import models
 from sqlalchemy.orm import Session
 from typing import List
@@ -8,7 +8,7 @@ from typing import List
 from .auth import get_current_user
 
 router = APIRouter(
-    prefix="/Venues",
+    prefix="/venues",
     tags=["Venue"]
 )
 
@@ -48,6 +48,7 @@ async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(ge
     id = current_user[0]
     venues  = db.query(models.Venue).filter(models.Venue.owner_id == id).all()
     return venues
+
 
 @router.get("/",status_code=status.HTTP_200_OK,response_model=List[CreateVenue])
 async def get_venue(db:Session=Depends(get_db)):

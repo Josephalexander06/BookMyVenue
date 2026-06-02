@@ -1,14 +1,16 @@
 from fastapi import Depends,status,HTTPException,APIRouter
 from utils.db_helper import get_db
-from utils.schema import CreateUser,OTP,UserOut
+from utils.schema import CreateUser,OTP, Booking_Owner
 from utils.config import settings
-from models import OTPVerification,User
+from models import OTPVerification,User, Booking, Venue
 from sqlalchemy.orm import Session
 from jose import jwt
 from .auth  import get_current_user
 from datetime import datetime,timedelta
 from passlib.context import CryptContext
 import random
+from zoneinfo import ZoneInfo
+
 
 
 router = APIRouter(
@@ -17,18 +19,19 @@ router = APIRouter(
 )
 pwd_content = CryptContext(schemes=["bcrypt"],deprecated ="auto")
 
+ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
 
 
 def send_otp_verification(phone_number:str,db:Session):
     otp = str(random.randint(100000,999999))
-    expire_at = datetime.utcnow() + timedelta(minutes=5)
+    expire_at = ist_now + timedelta(minutes=5)
     # print(otp)
     safe_otp = otp[:72] 
     otp_hashed =  pwd_content.hash(safe_otp)
     otp_record = OTPVerification(
         phone_number = phone_number,
         otp_hash = otp_hashed,
-        created_at = datetime.utcnow(),
+        created_at = ist_now,
         expire_at = expire_at
     )
     db.add(otp_record)
@@ -39,7 +42,7 @@ def send_otp_verification(phone_number:str,db:Session):
 def verify_otp(phone_number:str,submitted_code:str,db:Session):
 
     stmt = db.query(OTPVerification).filter(
-        OTPVerification.phone_number == phone_number, OTPVerification.is_used == False, OTPVerification.expire_at > datetime.utcnow()
+        OTPVerification.phone_number == phone_number, OTPVerification.is_used == False, OTPVerification.expire_at > ist_now
     ).order_by(OTPVerification.expire_at.desc()).first()
 
     if not stmt:
@@ -77,7 +80,7 @@ async def check_otp(payload:OTP,db:Session=Depends(get_db)):
         db.commit()
         db.refresh(db_user)
     
-    expire = datetime.utcnow() + timedelta(days=7)
+    expire = ist_now + timedelta(days=7)
 
 
     token = jwt.encode(
@@ -94,14 +97,31 @@ async def check_otp(payload:OTP,db:Session=Depends(get_db)):
     
       
 
-@router.get("/user/{id}",status_code=status.HTTP_200_OK,response_model=UserOut)
-async def get_user_with_venue(id:int,db: Session = Depends(get_db),cuurent_user : int = Depends(get_current_user)):
-    print(id)
+@router.get("/",status_code=status.HTTP_200_OK)
+async def get_user(db: Session = Depends(get_db),current_user : int = Depends(get_current_user)):
 
-    user = db.query(User).filter(User.id == id).first()
-    if not user:
+    users = db.query(User).filter(User.id == current_user[0]).first()
+
+    print(users)
+
+    if not users:
         raise HTTPException(status_code=404,detail="user Not Found")
     
-    return user
+    return {"phone_number":users.phone_number}
 
 
+@router.get("/bookings",response_model=list[Booking_Owner])
+def recieved_request(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+
+    bookings = db.query(Booking,Venue).join(Venue,Booking.venue_id == Venue.id).filter(Venue.owner_id == current_user[0]).all()
+
+    result = []
+
+    for booking,venue in bookings:
+        result.append({
+            "name":venue.name,
+            "booking_date":booking.booking_date,
+            "status":booking.status
+        })
+    
+    return result

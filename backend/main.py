@@ -1,10 +1,11 @@
 from fastapi import FastAPI      
-from routers import auth,users,venue
+from routers import booking,users,venue
 from utils.db_helper import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 
-Base.metadata.create_all(bind=engine)
 
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -19,10 +20,11 @@ app.add_middleware(
 )
 
 
-# app.include_router(auth.router)
+app.include_router(booking.router)
 app.include_router(users.router)
 app.include_router(venue.router)
 # app.include_router(google_auth.router)
+
 
 
 @app.get("/")

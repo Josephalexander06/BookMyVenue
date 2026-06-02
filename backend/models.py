@@ -16,6 +16,8 @@ class Venue(Base):
     owner_id = Column(Integer,ForeignKey("users.id", ondelete="CASCADE"),nullable=False)
 
     owner  = relationship("User",back_populates="venues")
+    bookings = relationship("Booking",back_populates="venue")
+ 
 
 class User(Base):
     __tablename__ =   "users"
@@ -28,6 +30,7 @@ class User(Base):
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
 
     venues = relationship("Venue",back_populates="owner",cascade="all,delete")
+    bookings = relationship("Booking",back_populates="user")
 
 class OTPVerification(Base):
     __tablename__ = "otp_verification"
@@ -38,3 +41,18 @@ class OTPVerification(Base):
     created_at = Column(DateTime(timezone=True), nullable=False)
     expire_at = Column(DateTime(timezone=True),nullable=False)
     is_used = Column(Boolean,default=False)
+
+class Booking(Base):
+    __tablename__ = 'bookings'
+
+    id = Column(Integer,primary_key=True,nullable=False)
+    user_id =  Column(Integer,ForeignKey("users.id"),nullable=False)
+    venue_id = Column(Integer,ForeignKey("venues.id"),nullable=False)
+
+    booking_date = Column(DateTime(timezone=True),nullable=False)
+    status = Column(String,default="PENDING")
+    created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
+
+    venue = relationship("Venue",back_populates="bookings")
+    user  = relationship("User",back_populates="bookings")
+
