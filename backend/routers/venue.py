@@ -12,14 +12,27 @@ router = APIRouter(
     tags=["Venue"]
 )
 
+def access_required(current_user : tuple = Depends(get_current_user)):
+    allowed_roles  ={'owner','admin'}
 
-@router.post("/",status_code=status.HTTP_201_CREATED,response_model=CreateVenue)
-async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),current_user:int = Depends(get_current_user)):
+    if current_user[1] not in allowed_roles:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Access Required")
+
+    return current_user
+
+def admin_required(current_user : int = Depends(get_current_user)):
+    if current_user[1] != 'admin':
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Access Required")
+    return current_user
+
+@router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[CreateVenue])
+async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),current_user:int = Depends(access_required)):
+    # print(current_user)
     new_venue = models.Venue(**Venues.dict())
     db.add(new_venue)
     db.commit()
     db.refresh(new_venue)
-    
+
     return [new_venue]
 
 @router.get("/",status_code=status.HTTP_200_OK,response_model=List[CreateVenue])

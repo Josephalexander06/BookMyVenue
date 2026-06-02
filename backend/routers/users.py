@@ -17,6 +17,7 @@ router = APIRouter(
 pwd_content = CryptContext(schemes=["bcrypt"],deprecated ="auto")
 
 
+
 def send_otp_verification(phone_number:str,db:Session):
     otp = str(random.randint(100000,999999))
     expire_at = datetime.utcnow() + timedelta(minutes=5)
@@ -81,7 +82,7 @@ async def check_otp(payload:OTP,db:Session=Depends(get_db)):
     token = jwt.encode(
         {
             "sub": str(db_user.id),
-            "phone": db_user.phone_number,
+            "role": db_user.role,
             "exp": expire
         },
         settings.SECRET_KEY,

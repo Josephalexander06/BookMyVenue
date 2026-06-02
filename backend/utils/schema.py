@@ -18,6 +18,7 @@ class CreateVenue(Venue):
 
 class User(BaseModel):
     phone_no : str
+    
     class Config:
         from_attributes = True
 
@@ -40,4 +41,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = 'utf-8'
+
+
 

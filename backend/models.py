@@ -1,5 +1,6 @@
 from utils.db_helper import Base
-from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime
+from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime, Enum
+import enum
 
 class Venue(Base):
     __tablename__ =   "Venues"
@@ -19,6 +20,7 @@ class User(Base):
     phone_number = Column(String, unique=True, index=True, nullable=False)
     is_verified = Column(Boolean, default=False)
     account_status = Column(Boolean,server_default='TRUE')
+    role = Column(String, nullable=False, default="customer")
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
 
 class OTPVerification(Base):
