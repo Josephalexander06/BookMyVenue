@@ -1,9 +1,9 @@
-from fastapi import Depends,status,HTTPException,Response,APIRouter
+from fastapi import Depends,status,HTTPException,Response,APIRouter, Query
 from utils.db_helper import get_db
 from utils.schema import CreateVenue, GetVenue
 import models
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from .users import access_required
 
 from .auth import get_current_user
@@ -35,8 +35,14 @@ async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(ge
 
 
 @router.get("/",status_code=status.HTTP_200_OK,response_model=List[CreateVenue])
-async def get_venue(db:Session=Depends(get_db)):
-    venues  = db.query(models.Venue).all()
+async def get_venue(q:Optional[str] = Query(None),db:Session=Depends(get_db)):
+
+    if q is not None:
+        processed_query = " & ".join(f"{word}:*" for word in q.split())
+
+        venues  = db.query(models.Venue).filter(models.Venue.search_vector.match(processed_query,postgresql_regconfig="english")).all()
+    else:
+        venues  = db.query(models.Venue).all()
     return venues
 
 
@@ -80,8 +86,3 @@ async def delete_venue(id:int,db:Session=Depends(get_db)):
     venue_query.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-
-
-

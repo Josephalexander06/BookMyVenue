@@ -1,6 +1,7 @@
 from utils.db_helper import Base
 from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import TSVECTOR
 
 
 class Venue(Base):
@@ -14,6 +15,7 @@ class Venue(Base):
     availability = Column(Boolean,server_default='TRUE')
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
     owner_id = Column(Integer,ForeignKey("users.id", ondelete="CASCADE"),nullable=False)
+    search_vector  = Column(TSVECTOR,nullable=False)
 
     owner  = relationship("User",back_populates="venues")
     bookings = relationship("Booking",back_populates="venue")
