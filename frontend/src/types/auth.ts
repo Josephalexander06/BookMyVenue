@@ -27,3 +27,9 @@ export interface VerifyOtpResponse {
   access_token: string;
   user: AuthUser;
 }
+
+export interface UserProfile {
+  firstName: string;
+  lastName: string;
+  dob: string; // YYYY-MM-DD
+}

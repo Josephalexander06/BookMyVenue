@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { 
   MapPin, 
   Users, 
@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useVenue } from "@/features/venues/hooks";
 import { formatCurrency, formatNumber } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth-store";
 
 // Map amenities to icons
 const amenityIcons: Record<string, any> = {
@@ -34,6 +35,8 @@ const amenityIcons: Record<string, any> = {
 
 export default function VenueDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const { isAuthenticated, openLogin } = useAuthStore();
   const venueId = params.id;
   const { data: venue, isLoading, isError } = useVenue(venueId);
 
@@ -77,15 +80,15 @@ export default function VenueDetailPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       {/* Back button */}
-      <Link href="/venues" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 mb-6 transition-colors">
+      <Link href="/venues" className="inline-flex items-center gap-2 text-sm font-medium text-[#999] hover:text-[#333] mb-6 transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back to explore
       </Link>
 
       {/* Header Info */}
       <div className="mb-6 space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{venue.name}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-[#333] sm:text-4xl">{venue.name}</h1>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
-          <span className="flex items-center gap-1 font-semibold text-slate-800">
+          <span className="flex items-center gap-1 font-semibold text-[#333]">
             <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
             {ratingValue}
           </span>
@@ -121,7 +124,7 @@ export default function VenueDetailPage() {
               <h2 className="text-xl font-bold text-slate-900">Hosted by {venue.ownerName ?? "Community Owner"}</h2>
               <p className="text-sm text-slate-500 mt-1">Capacity: up to {formatNumber(venue.capacity)} guests</p>
             </div>
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center text-white font-bold text-lg shadow-sm">
               {(venue.ownerName ?? "CO").substring(0, 2).toUpperCase()}
             </div>
           </div>
@@ -178,8 +181,28 @@ export default function VenueDetailPage() {
               
               <div className="flex items-baseline justify-between border-b border-slate-50 pb-4">
                 <div>
-                  <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricing)}</span>
-                  <span className="text-sm font-normal text-slate-500"> / day</span>
+                  {venue.allowedModes === "HOURLY" ? (
+                    <>
+                      <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricePerHour ?? 0)}</span>
+                      <span className="text-sm font-normal text-slate-500"> / hour</span>
+                    </>
+                  ) : venue.allowedModes === "DAILY" ? (
+                    <>
+                      <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricing)}</span>
+                      <span className="text-sm font-normal text-slate-500"> / day</span>
+                    </>
+                  ) : (
+                    <div className="space-y-1">
+                      <div>
+                        <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricing)}</span>
+                        <span className="text-sm font-normal text-slate-500"> / day</span>
+                      </div>
+                      <div>
+                        <span className="text-lg font-bold text-slate-700">{formatCurrency(venue.pricePerHour ?? 0)}</span>
+                        <span className="text-xs font-normal text-slate-500"> / hour</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <span className="flex items-center gap-0.5 text-sm font-semibold text-slate-800">
                   ★ {ratingValue}
@@ -198,11 +221,20 @@ export default function VenueDetailPage() {
                 </div>
               </div>
 
-              <Link href={`/venues/${venue.id}/book`} className="block">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 py-6 rounded-xl font-bold shadow-soft transition-transform duration-100 active:scale-95 text-base">
-                  Book This Venue Now
-                </Button>
-              </Link>
+              <Button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openLogin(() => {
+                      router.push(`/venues/${venue.id}/book`);
+                    });
+                  } else {
+                    router.push(`/venues/${venue.id}/book`);
+                  }
+                }}
+                className="w-full bg-accent hover:bg-accent-hover py-6 rounded-xl font-bold shadow-soft transition-transform duration-100 active:scale-95 text-base"
+              >
+                Book This Venue Now
+              </Button>
 
               <div className="text-center">
                 <span className="text-xs text-slate-400">You won&apos;t be charged yet</span>

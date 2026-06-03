@@ -38,6 +38,10 @@ const statusConfig: Record<
     label: "Rejected",
     className: "border-red-200 bg-red-50 text-red-700",
   },
+  cancelled: {
+    label: "Cancelled",
+    className: "border-slate-200 bg-slate-50 text-slate-600",
+  },
 };
 
 function BookingsSkeleton() {

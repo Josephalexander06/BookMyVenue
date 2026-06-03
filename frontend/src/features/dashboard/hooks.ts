@@ -7,6 +7,6 @@ export function summarizeBookings(bookings: Booking[]) {
       acc[booking.status] += 1;
       return acc;
     },
-    { total: 0, pending: 0, approved: 0, rejected: 0 },
+    { total: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 },
   );
 }

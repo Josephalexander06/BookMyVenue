@@ -7,6 +7,7 @@ import {
   getBookings,
   rejectBooking,
   getMyBookings,
+  cancelBooking,
 } from "@/features/bookings/api";
 
 export function useBookings() {
@@ -49,6 +50,17 @@ export function useRejectBooking() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: rejectBooking,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+    },
+  });
+}
+
+export function useCancelBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cancelBooking,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });

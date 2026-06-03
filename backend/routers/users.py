@@ -1,8 +1,8 @@
 from fastapi import Depends,status,HTTPException,APIRouter
 from utils.db_helper import get_db
-from utils.schema import CreateUser,OTP, Bookings, Venue
+from utils.schema import CreateUser,OTP, Profile
 from utils.config import settings
-from models import OTPVerification,User
+from models import OTPVerification,User, Owner
 from sqlalchemy.orm import Session
 from jose import jwt
 from .auth  import get_current_user
@@ -87,6 +87,10 @@ async def check_otp(payload:OTP,db:Session=Depends(get_db)):
     verify_otp(payload.phone_no,payload.otp,db)
 
     db_user = db.query(User).filter(User.phone_number == payload.phone_no).first()
+
+    if db_user and (db_user.account_status == False or db_user.account_status == 'f'):
+        raise HTTPException(status_code=403,detail="Account Blocked, Contact Customer Care")
+    
     if not db_user:
         db_user = User(
             phone_number = payload.phone_no,
@@ -132,8 +136,24 @@ def become_owner(db:Session = Depends(get_db),current_user : int = Depends(get_c
 
     user.role = "owner"
     db.commit()
+    db.refresh(user)
 
-    return user
+    expire = ist_now + timedelta(days=7)
+    token = jwt.encode(
+        {
+            "sub": str(user.id),
+            "role": user.role,
+            "exp": expire
+        },
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+
+    return {"access_token": token, "user": {
+        "id": user.id,
+        "phone_number": user.phone_number,
+        "role": user.role,
+    }}
 
 
 @router.get("/getuser")
@@ -148,3 +168,71 @@ def show_users(db:Session = Depends(get_db),current_user:int = Depends(admin_req
             result.append(users)
     
     return result
+
+
+@router.get("/profile")
+def get_profile(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+    profile = db.query(Owner).filter(Owner.user_id == current_user[0]).first()
+    if not profile:
+        return {
+            "first_name": "",
+            "last_name": "",
+            "dob": None
+        }
+    return {
+        "first_name": profile.first_name,
+        "last_name": profile.last_name,
+        "dob": profile.dob.date().isoformat() if profile.dob else None
+    }
+
+
+@router.post("/profile")
+def create_or_update_profile(user_data : Profile,db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+
+    profile = db.query(Owner).filter(Owner.user_id == current_user[0]).first()
+    dob_dt = datetime.combine(user_data.dob, datetime.min.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+    
+    if profile:
+        profile.first_name = user_data.first_name
+        profile.last_name = user_data.last_name
+        profile.dob = dob_dt
+    else:
+        profile = Owner(
+            first_name = user_data.first_name,
+            last_name = user_data.last_name,
+            dob = dob_dt,
+            user_id = current_user[0]
+        )
+        db.add(profile)
+        
+    db.commit()
+    db.refresh(profile)
+
+    return profile
+
+@router.post("/{id}/userblock")
+def block_user(id:int,db:Session= Depends(get_db),current_user : int = Depends(admin_required)):
+
+    user = db.query(User).filter(User.id == id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.account_status = False
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+@router.post("/{id}/userunblock")
+def unblock_user(id:int,db:Session= Depends(get_db),current_user : int = Depends(admin_required)):
+
+    user = db.query(User).filter(User.id == id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.account_status = True
+    db.commit()
+    db.refresh(user)
+
+    return user

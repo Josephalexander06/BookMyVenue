@@ -9,17 +9,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: "#eff6ff",
-          100: "#dbeafe",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
+        nav: {
+          DEFAULT: "#1A1D2E",
+          dark: "#121420",
+          light: "#2E334D",
         },
+        accent: {
+          DEFAULT: "#F84464",
+          hover: "#E03251",
+          light: "#FFECEF",
+        },
+        body: "#FAFAFA",
+        border: "#EBEBEB",
       },
       boxShadow: {
-        soft: "0 2px 8px -2px rgba(0, 0, 0, 0.08)",
-        hover: "0 8px 24px -8px rgba(0, 0, 0, 0.12)",
+        soft: "0 1px 6px rgba(0, 0, 0, 0.06)",
+        hover: "0 8px 24px -4px rgba(0, 0, 0, 0.1)",
+        card: "0 2px 8px rgba(0, 0, 0, 0.06)",
+      },
+      borderRadius: {
+        "2xl": "16px",
+        "3xl": "20px",
       },
     },
   },

@@ -1,4 +1,4 @@
-export type BookingStatus = "pending" | "approved" | "rejected";
+export type BookingStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 export interface Booking {
   id: string;
@@ -10,6 +10,7 @@ export interface Booking {
   note?: string;
   status: BookingStatus;
   createdAt: string;
+  mode?: "DAILY" | "HOURLY" | "BOTH";
 }
 
 export interface CreateBookingPayload {
@@ -17,11 +18,15 @@ export interface CreateBookingPayload {
   date: string;
   attendees: number;
   note?: string;
+  startTime?: string;
+  endTime?: string;
+  mode?: string;
 }
 
 export interface BookingStats {
   pending: number;
   approved: number;
   rejected: number;
+  cancelled: number;
   total: number;
 }

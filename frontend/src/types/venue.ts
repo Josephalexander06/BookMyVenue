@@ -18,6 +18,8 @@ export interface Venue {
   type: VenueType;
   amenities: string[];
   pricing: number;
+  pricePerHour?: number;
+  allowedModes?: "DAILY" | "HOURLY" | "BOTH";
   imageUrl?: string;
   ownerName?: string;
   ownerPhone?: string;
@@ -48,8 +50,11 @@ export interface CreateVenuePayload {
   description: string;
   capacity: number;
   location: string;
+  city?: string;
   type: VenueType;
   amenities: string[];
   pricing: number;
+  pricePerHour?: number;
+  allowedModes?: "DAILY" | "HOURLY" | "BOTH";
   imageUrl?: string;
 }

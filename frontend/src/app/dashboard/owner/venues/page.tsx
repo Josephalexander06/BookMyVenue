@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -30,9 +31,12 @@ const emptyForm: CreateVenuePayload = {
   description: "",
   capacity: 25,
   location: "",
+  city: "",
   type: "meeting_room",
   amenities: [],
   pricing: 1000,
+  pricePerHour: 120,
+  allowedModes: "BOTH",
 };
 
 const venueTypeLabels: Record<string, string> = {
@@ -47,6 +51,7 @@ const venueTypeLabels: Record<string, string> = {
 };
 
 export default function OwnerVenuesPage() {
+  const router = useRouter();
   const { data, isLoading } = useVenues({ ownerOnly: true });
   const createVenue = useCreateVenue();
   const updateVenue = useUpdateVenue();
@@ -74,9 +79,12 @@ export default function OwnerVenuesPage() {
       description: venue.description,
       capacity: venue.capacity,
       location: venue.location,
+      city: venue.city ?? "",
       type: venue.type,
       amenities: venue.amenities,
       pricing: venue.pricing,
+      pricePerHour: venue.pricePerHour ?? Math.round(venue.pricing / 8),
+      allowedModes: venue.allowedModes ?? "BOTH",
       imageUrl: venue.imageUrl,
     });
     setDialogOpen(true);
@@ -127,13 +135,20 @@ export default function OwnerVenuesPage() {
             Venues
           </h1>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreate} className="gap-2 rounded-xl shadow-soft transition-all hover:shadow-hover">
-                <Plus className="h-4 w-4" />
-                Add venue
-              </Button>
-            </DialogTrigger>
+          <Button
+            onClick={openCreate}
+            className="gap-2 rounded-xl shadow-soft transition-all hover:shadow-hover"
+          >
+            <Plus className="h-4 w-4" />
+            Add venue
+          </Button>
+
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            if (!open) {
+              setEditing(null);
+              setDialogOpen(false);
+            }
+          }}>
 
             <DialogContent>
               <div className="space-y-6">
@@ -172,9 +187,28 @@ export default function OwnerVenuesPage() {
                     />
                   </div>
 
-                  {/* Two columns */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
+                  {/* Booking Allowed Modes */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700">Allowed Booking Mode</label>
+                    <Select
+                      value={form.allowedModes ?? "BOTH"}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          allowedModes: e.target.value as CreateVenuePayload["allowedModes"],
+                        }))
+                      }
+                      className="h-11 rounded-xl border-slate-200"
+                    >
+                      <option value="BOTH">Both Daily & Hourly</option>
+                      <option value="DAILY">Daily Booking Only (Airbnb style)</option>
+                      <option value="HOURLY">Hourly Slots Only (BookMyShow style)</option>
+                    </Select>
+                  </div>
+
+                  {/* Price per Day & Hour Fields */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1.5 col-span-1">
                       <label className="text-sm font-medium text-slate-700">Capacity</label>
                       <Input
                         type="number"
@@ -185,28 +219,54 @@ export default function OwnerVenuesPage() {
                         className="h-11 rounded-xl border-slate-200"
                       />
                     </div>
+                    {(form.allowedModes === "DAILY" || form.allowedModes === "BOTH" || !form.allowedModes) && (
+                      <div className="space-y-1.5 col-span-1">
+                        <label className="text-sm font-medium text-slate-700">Price / day</label>
+                        <Input
+                          type="number"
+                          value={form.pricing}
+                          onChange={(e) =>
+                            setForm((p) => ({ ...p, pricing: Number(e.target.value) }))
+                          }
+                          className="h-11 rounded-xl border-slate-200"
+                        />
+                      </div>
+                    )}
+                    {(form.allowedModes === "HOURLY" || form.allowedModes === "BOTH") && (
+                      <div className="space-y-1.5 col-span-1">
+                        <label className="text-sm font-medium text-slate-700">Price / hour</label>
+                        <Input
+                          type="number"
+                          value={form.pricePerHour ?? Math.round(form.pricing / 8)}
+                          onChange={(e) =>
+                            setForm((p) => ({ ...p, pricePerHour: Number(e.target.value) }))
+                          }
+                          className="h-11 rounded-xl border-slate-200"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Place & Address */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700">Price / day</label>
+                      <label className="text-sm font-medium text-slate-700">Place</label>
                       <Input
-                        type="number"
-                        value={form.pricing}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, pricing: Number(e.target.value) }))
-                        }
+                        placeholder="e.g. Kochi"
+                        value={form.city ?? ""}
+                        onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
                         className="h-11 rounded-xl border-slate-200"
                       />
                     </div>
-                  </div>
-
-                  {/* Location */}
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">Location</label>
-                    <Input
-                      placeholder="City, area or address"
-                      value={form.location}
-                      onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
-                      className="h-11 rounded-xl border-slate-200"
-                    />
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-slate-700">Address</label>
+                      <Input
+                        placeholder="Full address"
+                        value={form.location}
+                        onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                        className="h-11 rounded-xl border-slate-200"
+                      />
+                    </div>
                   </div>
 
                   {/* Type */}
@@ -278,7 +338,7 @@ export default function OwnerVenuesPage() {
 
                 <CardContent className="space-y-4 pt-0">
                   {/* Meta row */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5" />
                       {venue.location}
@@ -287,10 +347,16 @@ export default function OwnerVenuesPage() {
                       <Users className="h-3.5 w-3.5" />
                       {venue.capacity}
                     </span>
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
                       <IndianRupee className="h-3.5 w-3.5" />
-                      {venue.pricing.toLocaleString()}
+                      {venue.pricing}/day
                     </span>
+                    {venue.pricePerHour && (
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
+                        <IndianRupee className="h-3.5 w-3.5" />
+                        {venue.pricePerHour}/hr
+                      </span>
+                    )}
                   </div>
 
                   {/* Actions */}

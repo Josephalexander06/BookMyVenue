@@ -7,8 +7,11 @@ from typing import Optional
 class Venue(BaseModel):
     name : str
     address : str
-    price : float
+    city : str = ""
+    price_per_day : Optional[float] = None
+    price_per_hour : Optional[float] = None
     capacity : int | None = None
+    booking_allowed_mode : Optional[str] = "BOTH"
 
     class Config:
         from_attributes = True
@@ -49,7 +52,11 @@ class Settings(BaseSettings):
 
 class Bookings(BaseModel):
        name : Optional[str] = None
-       booking_date : date 
+       venue_id : Optional[int] = None
+       booking_date : datetime | date 
+       start_time : Optional[datetime] = None
+       end_time : Optional[datetime] = None
+       mode : Optional[str] = None
        class Config:
         from_attributes = True
     
@@ -58,5 +65,12 @@ class Booking_Owner(Bookings):
     status : str
     address : Optional[str] = None
     venue_id : Optional[int] = None
-    customer_name : Optional[str] = None
+    name : Optional[str] = None
 
+
+class Profile(BaseModel):
+    first_name : str
+    last_name : str
+    dob : date
+    class Config:
+        from_attributes = True

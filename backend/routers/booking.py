@@ -3,11 +3,12 @@ from .auth import get_current_user
 from utils.db_helper import get_db
 from sqlalchemy.orm import Session
 from utils.schema import Bookings, Booking_Owner
-from models import Booking, Venue
+from models import Booking, Venue, User
 from pydantic import field_validator
 from .users import access_required,admin_required
 from datetime import date,datetime
 from zoneinfo import ZoneInfo
+
 
 
 router = APIRouter(
@@ -17,22 +18,48 @@ router = APIRouter(
 
 ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
 
-@field_validator("booking_date")
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=Bookings)
 def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
     
-    v_id = db.query(Venue).filter(Venue.name == book.name).first()
+    # Query with row lock on the venue to prevent race conditions during concurrent bookings
+    if book.venue_id is not None:
+        v_id = db.query(Venue).filter(Venue.id == book.venue_id).with_for_update().first()
+    else:
+        v_id = db.query(Venue).filter(Venue.name == book.name).with_for_update().first()
 
     if v_id is None:
         raise HTTPException(status_code=404,detail="Venue not found")
     
     today = date.today()
-    if book.booking_date < today:
+    booking_day = book.booking_date.date() if isinstance(book.booking_date, datetime) else book.booking_date
+    if booking_day < today:
         raise HTTPException(status_code=404,detail="Cant book older date")
     
+    # Defensively compute start/end times if null
+    start_t = book.start_time
+    end_t = book.end_time
+    if start_t is None:
+        start_t = datetime.combine(booking_day, datetime.min.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+    if end_t is None:
+        end_t = datetime.combine(booking_day, datetime.max.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+
+    # Check for active (pending or approved) booking overlaps
+    check_booking = db.query(Booking).filter(
+        Booking.venue_id == v_id.id,
+        Booking.status.in_(["PENDING", "APPROVED"]),
+        Booking.start_time < end_t,
+        Booking.end_time > start_t
+    ).first()
+
+    if check_booking:
+        raise HTTPException(status_code=400,detail="Venue already Booked")
+
     new_booking = Booking(
         user_id = current_user[0],
         venue_id = v_id.id,
+        booking_mode = book.mode or "DAILY",
+        start_time = start_t,
+        end_time = end_t,
         booking_date = book.booking_date,
         created_at = ist_now
     )
@@ -46,9 +73,6 @@ def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int
 @router.get("/",response_model=list[Booking_Owner])
 def recieved_request(db:Session = Depends(get_db),current_user : tuple = Depends(get_current_user)):
 
-    # Import User model to join and retrieve customer details
-    from models import User
-    
     if current_user[1] == 'admin':
         bookings = db.query(Booking, Venue, User).join(Venue, Booking.venue_id == Venue.id).join(User, Booking.user_id == User.id).all()
     else:
@@ -84,6 +108,22 @@ def booking_rejection(id : int,db:Session=Depends(get_db),current_user : tuple =
 
     booking_approval = db.query(Booking).filter(Booking.id == id).first()
     booking_approval.status = "REJECTED"
+    db.commit()
+
+    return {"updated"}
+
+
+@router.patch("/{id}/cancel")
+def booking_cancellation(id : int,db:Session=Depends(get_db),current_user : tuple = Depends(get_current_user)):
+
+    booking = db.query(Booking).filter(Booking.id == id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking.user_id != current_user[0]:
+        raise HTTPException(status_code=403, detail="You can only cancel your own bookings")
+
+    booking.status = "CANCELLED"
     db.commit()
 
     return {"updated"}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Phone } from "lucide-react";
+import { ArrowLeft, Building2, Phone } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,8 +43,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
-      <div className="w-full max-w-sm animate-fade-in">
+    <div className="flex min-h-screen items-center justify-center px-4 bg-body">
+      <div className="w-full max-w-sm animate-fade-in bg-white rounded-2xl shadow-card p-8">
+        {/* Logo */}
+        <div className="flex items-center gap-2 mb-8">
+          <Building2 className="h-7 w-7 text-accent" />
+          <span className="text-xl font-bold tracking-tight text-slate-900">
+            Book<span className="text-accent">My</span>Venue
+          </span>
+        </div>
+
         {/* Back link */}
         <Link
           href="/"
@@ -78,14 +86,14 @@ export default function LoginPage() {
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
                   placeholder="+91 98765 43210"
-                  className="pl-10 h-12 rounded-xl border-slate-200 text-sm font-medium focus-visible:ring-slate-900 placeholder:text-slate-300"
+                  className="pl-10 h-12 rounded-xl border-slate-200 text-sm font-medium focus-visible:ring-accent placeholder:text-slate-300"
                 />
               </div>
             </div>
             <Button
               type="submit"
               disabled={sendOtp.isPending}
-              className="w-full h-12 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+              className="w-full h-12 bg-accent hover:bg-accent-hover rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
             >
               {sendOtp.isPending ? "Sending..." : "Continue"}
             </Button>
@@ -98,7 +106,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setStep("phone")}
-                  className="text-xs font-medium text-blue-600 hover:underline"
+                  className="text-xs font-medium text-accent hover:underline"
                 >
                   Change
                 </button>
@@ -110,13 +118,13 @@ export default function LoginPage() {
                 value={otp}
                 onChange={(event) => setOtp(event.target.value)}
                 placeholder="000000"
-                className="h-12 rounded-xl border-slate-200 text-center text-lg tracking-[0.3em] font-bold focus-visible:ring-slate-900 placeholder:text-slate-200 placeholder:tracking-[0.3em]"
+                className="h-12 rounded-xl border-slate-200 text-center text-lg tracking-[0.3em] font-bold focus-visible:ring-accent placeholder:text-slate-200 placeholder:tracking-[0.3em]"
               />
             </div>
             <Button
               type="submit"
               disabled={verifyOtp.isPending}
-              className="w-full h-12 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+              className="w-full h-12 bg-accent hover:bg-accent-hover rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
             >
               {verifyOtp.isPending ? "Verifying..." : "Verify & continue"}
             </Button>

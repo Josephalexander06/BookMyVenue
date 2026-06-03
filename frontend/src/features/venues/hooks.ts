@@ -7,6 +7,7 @@ import {
   getVenueById,
   getVenues,
   updateVenue,
+  getBookedDates,
 } from "@/features/venues/api";
 import type { CreateVenuePayload, VenueFilters } from "@/types/venue";
 
@@ -50,5 +51,13 @@ export function useDeleteVenue() {
   return useMutation({
     mutationFn: deleteVenue,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["venues"] }),
+  });
+}
+
+export function useBookedDates(id: string) {
+  return useQuery({
+    queryKey: ["booked-dates", id],
+    queryFn: () => getBookedDates(id),
+    enabled: Boolean(id),
   });
 }

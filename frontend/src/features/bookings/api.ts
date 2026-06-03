@@ -9,7 +9,11 @@ export async function createBooking(payload: CreateBookingPayload) {
   
   const backendPayload = {
     name: venue.name,
+    venue_id: Number(payload.venueId),
     booking_date: payload.date,
+    start_time: payload.startTime,
+    end_time: payload.endTime,
+    mode: payload.mode,
   };
   
   const { data } = await apiClient.post<any>("/booking/", backendPayload);
@@ -21,6 +25,7 @@ export async function createBooking(payload: CreateBookingPayload) {
     date: data.booking_date,
     status: data.status ? (data.status.toLowerCase() as BookingStatus) : "pending",
     createdAt: data.created_at ?? data.booking_date,
+    mode: data.mode,
   } as Booking;
 }
 
@@ -41,6 +46,7 @@ export async function getBookings() {
       status: bookingStatus,
       createdAt: b.created_at ?? b.booking_date ?? new Date().toISOString(),
       customerName: b.customer_name ?? "Customer",
+      mode: b.mode,
     };
   }) as Booking[];
 }
@@ -58,6 +64,7 @@ export async function getMyBookings() {
       status: bookingStatus,
       createdAt: b.created_at ?? b.booking_date ?? new Date().toISOString(),
       customerName: b.customer_name ?? "Customer",
+      mode: b.mode,
     };
   }) as Booking[];
 }
@@ -69,5 +76,10 @@ export async function approveBooking(id: string) {
 
 export async function rejectBooking(id: string) {
   const { data } = await apiClient.patch<any>(`/booking/${id}/reject`);
+  return data;
+}
+
+export async function cancelBooking(id: string) {
+  const { data } = await apiClient.patch<any>(`/booking/${id}/cancel`);
   return data;
 }

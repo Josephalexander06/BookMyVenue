@@ -1,71 +1,96 @@
 import Link from "next/link";
-import { MapPin, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { MapPin, Star } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { Venue } from "@/types/venue";
 
 export function VenueCard({ venue }: { venue: Venue }) {
-  // Generate a realistic stable rating based on the name character values
+  // Stable rating from venue name
   const ratingValue = (
-    4.5 +
-    parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.4).toFixed(1))
+    4.2 +
+    parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.6).toFixed(1))
   ).toFixed(1);
-  const reviewsCount = Math.floor(
-    15 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 85)
+  const votesCount = Math.floor(
+    120 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 880)
   );
 
   return (
-    <Link href={`/venues/${venue.id}`} className="group block h-full">
-      <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white p-3 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-hover">
-        {/* Image Frame */}
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-100">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={venue.imageUrl || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"}
-            alt={venue.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-          <Badge className="absolute left-3 top-3 border-0 bg-white/90 px-2.5 py-1 text-xs font-semibold text-slate-800 backdrop-blur-sm hover:bg-white">
-            {venue.type.replace("_", " ")}
-          </Badge>
-        </div>
+    <Link href={`/venues/${venue.id}`} className="group block w-[176px] sm:w-[200px]">
+      {/* Image */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-gray-100">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={venue.imageUrl || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=530&fit=crop"}
+          alt={venue.name}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
 
-        {/* Content details */}
-        <div className="mt-3 flex flex-1 flex-col justify-between px-1">
-          <div className="space-y-1">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="line-clamp-1 text-base font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
-                {venue.name}
-              </h3>
-              <span className="flex items-center gap-0.5 text-sm font-medium text-amber-500 shrink-0">
-                ★ {ratingValue}
-              </span>
-            </div>
-
-            <p className="flex items-center gap-1 text-xs text-slate-500">
-              <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="line-clamp-1">{venue.location}</span>
-            </p>
-          </div>
-
-          <div className="mt-3 space-y-2 border-t border-slate-50 pt-2">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <Users className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span>Up to {venue.capacity} guests</span>
-            </div>
-
-            <div className="flex items-baseline justify-between pt-1">
-              <div>
-                <span className="text-base font-bold text-slate-900">{formatCurrency(venue.pricing)}</span>
-                <span className="text-xs font-normal text-slate-500"> / day</span>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:underline">
-                View details &rarr;
-              </span>
-            </div>
+        {/* Rating pill */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-3 pb-2.5 pt-8">
+          <div className="flex items-center gap-1.5">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span className="text-xs font-bold text-white">{ratingValue}/10</span>
+            <span className="text-[10px] text-white/70">{(votesCount / 1000).toFixed(1)}K Votes</span>
           </div>
         </div>
       </div>
+
+      {/* Info */}
+      <div className="mt-2 px-0.5">
+        <h3 className="text-sm font-bold text-[#333] line-clamp-1 group-hover:text-accent transition-colors">
+          {venue.name}
+        </h3>
+        <p className="text-xs text-[#999] mt-0.5 capitalize">
+          {venue.type.replace("_", " ")}
+        </p>
+        <div className="flex items-center gap-1 mt-1 text-[11px] text-[#999]">
+          <MapPin className="h-3 w-3 shrink-0" />
+          <span className="line-clamp-1">{venue.location}</span>
+        </div>
+        <p className="mt-1.5 text-sm font-bold text-[#333]">
+          {venue.allowedModes === "HOURLY" ? (
+            <>
+              {formatCurrency(venue.pricePerHour ?? 0)}
+              <span className="text-[10px] font-normal text-[#999]"> /hr</span>
+            </>
+          ) : (
+            <>
+              {formatCurrency(venue.pricing)}
+              <span className="text-[10px] font-normal text-[#999]"> /day</span>
+            </>
+          )}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+/** Compact horizontal card for "See All" style rows */
+export function VenueCardCompact({ venue }: { venue: Venue }) {
+  const ratingValue = (
+    4.2 +
+    parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.6).toFixed(1))
+  ).toFixed(1);
+
+  return (
+    <Link href={`/venues/${venue.id}`} className="group block w-[140px] sm:w-[160px]">
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-gray-100">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={venue.imageUrl || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=320&h=420&fit=crop"}
+          alt={venue.name}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2 pb-2 pt-6">
+          <div className="flex items-center gap-1">
+            <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+            <span className="text-[10px] font-bold text-white">{ratingValue}</span>
+          </div>
+        </div>
+      </div>
+      <h3 className="mt-1.5 text-xs font-bold text-[#333] line-clamp-1 group-hover:text-accent transition-colors">
+        {venue.name}
+      </h3>
+      <p className="text-[10px] text-[#999] capitalize">{venue.type.replace("_", " ")}</p>
     </Link>
   );
 }

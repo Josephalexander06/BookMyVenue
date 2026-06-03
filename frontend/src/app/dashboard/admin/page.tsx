@@ -192,6 +192,8 @@ export default function AdminDashboardPage() {
                                 ? "bg-emerald-50 text-emerald-600" 
                                 : booking.status === "rejected" 
                                 ? "bg-red-50 text-red-500" 
+                                : booking.status === "cancelled"
+                                ? "bg-slate-100 text-slate-500"
                                 : "bg-amber-50 text-amber-500"
                             }`}>
                               {booking.status}

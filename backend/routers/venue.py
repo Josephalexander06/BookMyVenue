@@ -17,7 +17,8 @@ router = APIRouter(
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[CreateVenue])
 async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),current_user:int = Depends(access_required)):
     # print(current_user)
-    new_venue = models.Venue(**Venues.dict())
+    venue_data = {k: v for k, v in Venues.dict().items() if hasattr(models.Venue, k)}
+    new_venue = models.Venue(**venue_data)
     new_venue.owner_id = current_user[0]
     db.add(new_venue)
     db.commit()
@@ -34,7 +35,7 @@ async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(ge
     return venues
 
 
-@router.get("/",status_code=status.HTTP_200_OK,response_model=List[CreateVenue])
+@router.get("/",status_code=status.HTTP_200_OK,response_model=List[GetVenue])
 async def get_venue(q:Optional[str] = Query(None),db:Session=Depends(get_db)):
 
     if q is not None:
@@ -47,7 +48,7 @@ async def get_venue(q:Optional[str] = Query(None),db:Session=Depends(get_db)):
 
 
 
-@router.get("/{id}",status_code=status.HTTP_200_OK,response_model=CreateVenue)
+@router.get("/{id}",status_code=status.HTTP_200_OK,response_model=GetVenue)
 async def get_venues(id:int,db: Session = Depends(get_db)):
     # print(id)
 
@@ -59,7 +60,7 @@ async def get_venues(id:int,db: Session = Depends(get_db)):
 
 
 
-@router.put("/{id}",status_code=status.HTTP_200_OK,response_model=CreateVenue)
+@router.put("/{id}",status_code=status.HTTP_200_OK,response_model=GetVenue)
 async def update_venue(id:int,updated_data:CreateVenue,db:Session=Depends(get_db)):
     fetch_venue = db.query(models.Venue).filter(models.Venue.id == id)
     exiting_v = fetch_venue.first()
@@ -67,7 +68,10 @@ async def update_venue(id:int,updated_data:CreateVenue,db:Session=Depends(get_db
     if not fetch_venue:
         raise HTTPException(status_code=404,detail="Venue Not Found")
 
-    fetch_venue.update(updated_data.dict(),synchronize_session=False)
+    venue_data = {k: v for k, v in updated_data.dict().items() if hasattr(models.Venue, k)}
+    from sqlalchemy import func
+    venue_data['search_vector'] = func.to_tsvector('english', updated_data.name + ' ' + updated_data.address)
+    fetch_venue.update(venue_data,synchronize_session=False)
     db.commit()
     
     updated_venue = fetch_venue.first()
@@ -86,3 +90,20 @@ async def delete_venue(id:int,db:Session=Depends(get_db)):
     venue_query.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{id}/booked-dates")
+def get_bookeddates(id:int,db:Session = Depends(get_db)):
+    booked = db.query(models.Booking).filter(
+        models.Booking.venue_id == id,
+        models.Booking.status.in_(["PENDING", "APPROVED"])
+    ).all()
+    result = []
+    for b in booked:
+        result.append({
+            "booking_date": b.booking_date.isoformat() if b.booking_date else None,
+            "start_time": b.start_time.isoformat() if b.start_time else None,
+            "end_time": b.end_time.isoformat() if b.end_time else None,
+            "booking_mode": b.booking_mode
+        })
+    return result   

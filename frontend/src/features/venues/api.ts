@@ -41,7 +41,9 @@ export async function getVenues(
       location: v.address,
       type: v.type ?? "meeting_room",
       amenities: v.amenities ?? ["WiFi", "Parking"],
-      pricing: v.price ?? 500,
+      pricing: v.price_per_day ?? v.price ?? 500,
+      pricePerHour: v.price_per_hour ?? Math.round((v.price_per_day ?? v.price ?? 500) / 8),
+      allowedModes: v.booking_allowed_mode ?? v.allowed_modes ?? "BOTH",
       imageUrl: v.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
       availability: v.availability ? "Available" : "Unavailable",
     };
@@ -75,7 +77,9 @@ export async function getVenueById(id: string): Promise<Venue> {
         location: found.address,
         type: found.type ?? "meeting_room",
         amenities: found.amenities ?? ["WiFi", "Parking"],
-        pricing: found.price ?? 500,
+        pricing: found.price_per_day ?? found.price ?? 500,
+        pricePerHour: found.price_per_hour ?? Math.round((found.price_per_day ?? found.price ?? 500) / 8),
+        allowedModes: found.booking_allowed_mode ?? found.allowed_modes ?? "BOTH",
         imageUrl: found.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
         availability: found.availability ? "Available" : "Unavailable",
       };
@@ -91,7 +95,9 @@ export async function getVenueById(id: string): Promise<Venue> {
     location: data.address,
     type: data.type ?? "meeting_room",
     amenities: data.amenities ?? ["WiFi", "Parking"],
-    pricing: data.price ?? 500,
+    pricing: data.price_per_day ?? data.price ?? 500,
+    pricePerHour: data.price_per_hour ?? Math.round((data.price_per_day ?? data.price ?? 500) / 8),
+    allowedModes: data.booking_allowed_mode ?? data.allowed_modes ?? "BOTH",
     imageUrl: data.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
     availability: data.availability ? "Available" : "Unavailable",
   };
@@ -101,8 +107,11 @@ export async function createVenue(payload: CreateVenuePayload): Promise<Venue> {
   const backendPayload = {
     name: payload.name,
     address: payload.location,
-    price: payload.pricing,
+    city: payload.city ?? "",
+    price_per_day: payload.allowedModes === "HOURLY" ? null : payload.pricing,
     capacity: payload.capacity,
+    price_per_hour: payload.allowedModes === "DAILY" ? null : payload.pricePerHour,
+    booking_allowed_mode: payload.allowedModes || "BOTH",
   };
   const { data } = await apiClient.post<any>("/venues", backendPayload);
   const res = Array.isArray(data) ? data[0] : data;
@@ -114,7 +123,9 @@ export async function createVenue(payload: CreateVenuePayload): Promise<Venue> {
     location: res.address,
     type: res.type ?? "meeting_room",
     amenities: res.amenities ?? ["WiFi", "Parking"],
-    pricing: res.price ?? 500,
+    pricing: res.price_per_day ?? res.price ?? 500,
+    pricePerHour: res.price_per_hour ?? Math.round((res.price_per_day ?? res.price ?? 500) / 8),
+    allowedModes: res.booking_allowed_mode ?? res.allowed_modes ?? "BOTH",
     imageUrl: res.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
     availability: res.availability ? "Available" : "Unavailable",
   };
@@ -127,8 +138,11 @@ export async function updateVenue(
   const backendPayload = {
     name: payload.name,
     address: payload.location,
-    price: payload.pricing,
+    city: payload.city ?? "",
+    price_per_day: payload.allowedModes ? (payload.allowedModes === "HOURLY" ? null : payload.pricing) : payload.pricing,
     capacity: payload.capacity,
+    price_per_hour: payload.allowedModes ? (payload.allowedModes === "DAILY" ? null : payload.pricePerHour) : payload.pricePerHour,
+    booking_allowed_mode: payload.allowedModes,
   };
   const { data } = await apiClient.put<any>(`/venues/${id}`, backendPayload);
   return {
@@ -139,7 +153,9 @@ export async function updateVenue(
     location: data.address,
     type: data.type ?? "meeting_room",
     amenities: data.amenities ?? ["WiFi", "Parking"],
-    pricing: data.price ?? 500,
+    pricing: data.price_per_day ?? data.price ?? 500,
+    pricePerHour: data.price_per_hour ?? Math.round((data.price_per_day ?? data.price ?? 500) / 8),
+    allowedModes: data.booking_allowed_mode ?? data.allowed_modes ?? "BOTH",
     imageUrl: data.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
     availability: data.availability ? "Available" : "Unavailable",
   };
@@ -147,5 +163,17 @@ export async function updateVenue(
 
 export async function deleteVenue(id: string) {
   const { data } = await apiClient.delete(`/venues/${id}`);
+  return data;
+}
+
+export interface BookedSlot {
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  booking_mode: "DAILY" | "HOURLY" | "BOTH";
+}
+
+export async function getBookedDates(id: string): Promise<BookedSlot[]> {
+  const { data } = await apiClient.get<BookedSlot[]>(`/venues/${id}/booked-dates`);
   return data;
 }

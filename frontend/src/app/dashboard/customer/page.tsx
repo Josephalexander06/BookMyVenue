@@ -13,6 +13,7 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 
 const links = [
   { href: "/dashboard/customer", label: "Overview" },
+  { href: "/dashboard/customer/profile", label: "Profile" },
 ];
 
 function DashboardSkeleton() {

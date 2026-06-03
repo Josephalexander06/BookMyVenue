@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth-store";
+import { LoginModal } from "@/components/auth/login-modal";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -12,5 +13,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     hydrate();
   }, [hydrate]);
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <LoginModal />
+    </QueryClientProvider>
+  );
 }

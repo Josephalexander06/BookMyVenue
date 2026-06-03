@@ -1,8 +1,8 @@
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { User, Shield, Key } from "lucide-react";
-import { useUsers } from "@/features/auth/hooks";
+import { User, Shield, Key, Ban, CheckCircle } from "lucide-react";
+import { useUsers, useBlockUser, useUnblockUser } from "@/features/auth/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const links = [
@@ -15,6 +15,28 @@ const links = [
 
 export default function AdminUsersPage() {
   const { data: users = [], isLoading, isError } = useUsers();
+  const blockMutation = useBlockUser();
+  const unblockMutation = useUnblockUser();
+
+  const handleBlock = async (id: string) => {
+    if (confirm("Are you sure you want to block this user?")) {
+      try {
+        await blockMutation.mutateAsync(id);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleUnblock = async (id: string) => {
+    if (confirm("Are you sure you want to unblock this user?")) {
+      try {
+        await unblockMutation.mutateAsync(id);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
 
   return (
     <div className="grid gap-8 lg:grid-cols-[260px,1fr]">
@@ -65,8 +87,41 @@ export default function AdminUsersPage() {
                       {user.role === "owner" && <Key className="h-2.5 w-2.5" />}
                       {user.role}
                     </span>
-                    <span className={`h-1.5 w-1.5 rounded-full ${user.status === "Active" ? "bg-emerald-500" : "bg-slate-300"}`} />
-                    <span className="text-xs font-medium text-slate-500">{user.status}</span>
+                    
+                    <div className="flex items-center gap-1.5 border-l border-slate-100 pl-3">
+                      <span className={`h-1.5 w-1.5 rounded-full ${
+                        user.status === "Blocked" 
+                          ? "bg-rose-500" 
+                          : user.status === "Active" 
+                          ? "bg-emerald-500" 
+                          : "bg-slate-350"
+                      }`} />
+                      <span className="text-xs font-medium text-slate-500 w-16">{user.status}</span>
+                    </div>
+
+                    {user.role !== "admin" && (
+                      <div className="flex items-center pl-2">
+                        {user.status === "Blocked" ? (
+                          <button
+                            onClick={() => handleUnblock(user.id)}
+                            disabled={unblockMutation.isPending}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-100 px-2.5 py-1 rounded-lg transition-all active:scale-[0.97] disabled:opacity-50"
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                            Unblock
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleBlock(user.id)}
+                            disabled={blockMutation.isPending}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100/70 border border-rose-100 px-2.5 py-1 rounded-lg transition-all active:scale-[0.97] disabled:opacity-50"
+                          >
+                            <Ban className="h-3 w-3" />
+                            Block
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

@@ -6,13 +6,25 @@ import { Pagination } from "@/components/marketplace/pagination";
 import { VenueCard } from "@/components/marketplace/venue-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useVenues } from "@/features/venues/hooks";
-import { Search } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import type { VenueFilters } from "@/types/venue";
+
+const venueTypes = [
+  { label: "All", value: "all" },
+  { label: "Cafes", value: "cafe" },
+  { label: "Auditoriums", value: "auditorium" },
+  { label: "Convention Halls", value: "convention_hall" },
+  { label: "Studios", value: "studio" },
+  { label: "Meeting Rooms", value: "meeting_room" },
+  { label: "Outdoor", value: "outdoor" },
+  { label: "Community Centers", value: "community_center" },
+  { label: "Event Venues", value: "event_venue" },
+];
 
 export default function VenuesPage() {
   const [filters, setFilters] = useState<VenueFilters>({
     page: 1,
-    pageSize: 12,
+    pageSize: 16,
     sortBy: "popular",
     type: "all",
   });
@@ -36,7 +48,6 @@ export default function VenuesPage() {
 
   const rows = useMemo(() => {
     const baseItems = data?.items ?? [];
-
     return baseItems.filter((venue) => {
       const matchesSearch = filters.search
         ? `${venue.name} ${venue.location}`.toLowerCase().includes(filters.search.toLowerCase())
@@ -53,81 +64,71 @@ export default function VenuesPage() {
   const total = rows.length;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-6">
-      {/* Search & Filters */}
-      <div className="flex flex-col md:flex-row gap-3 items-center">
-        {/* Search input */}
-        <div className="relative flex-1 w-full md:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-          <input
-            type="text"
-            placeholder="Search spaces..."
-            value={filters.search ?? ""}
-            onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value, page: 1 }))}
-            className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200 placeholder:text-slate-300 transition-all"
-          />
+    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 space-y-6">
+      {/* Filters Bar */}
+      <div className="flex flex-col gap-4">
+        {/* Type filter pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {venueTypes.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setFilters((prev) => ({ ...prev, type: t.value as any, page: 1 }))}
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                (filters.type ?? "all") === t.value
+                  ? "bg-accent text-white shadow-sm"
+                  : "bg-white text-[#666] border border-border hover:border-[#ccc] hover:text-[#333]"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Filter pills */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        {/* Sort + Location */}
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="text"
-            placeholder="City"
+            placeholder="Filter by city..."
             value={filters.location ?? ""}
             onChange={(e) => setFilters({ ...filters, location: e.target.value, page: 1 })}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium focus:outline-none focus:border-slate-300 bg-white placeholder:text-slate-300 text-slate-700 w-24"
+            className="rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium focus:outline-none focus:border-accent/40 placeholder:text-[#bbb] text-[#333] w-32"
           />
-
-          <select
-            value={filters.type ?? "all"}
-            onChange={(e) => setFilters({ ...filters, type: e.target.value as any, page: 1 })}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium focus:outline-none focus:border-slate-300 bg-white text-slate-700 appearance-none cursor-pointer"
-          >
-            <option value="all">All types</option>
-            <option value="cafe">Cafe</option>
-            <option value="auditorium">Auditorium</option>
-            <option value="convention_hall">Convention Hall</option>
-            <option value="studio">Studio</option>
-            <option value="meeting_room">Meeting Room</option>
-            <option value="outdoor">Outdoor</option>
-            <option value="community_center">Community Center</option>
-            <option value="event_venue">Event Venue</option>
-          </select>
-
           <select
             value={filters.sortBy ?? "popular"}
             onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any, page: 1 })}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium focus:outline-none focus:border-slate-300 bg-white text-slate-700 appearance-none cursor-pointer"
+            className="rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium focus:outline-none focus:border-accent/40 text-[#333] appearance-none cursor-pointer"
           >
             <option value="popular">Popular</option>
             <option value="price_low">Price ↑</option>
             <option value="price_high">Price ↓</option>
             <option value="capacity">Capacity</option>
           </select>
+          <div className="text-xs text-[#999] ml-auto">
+            {total} {total === 1 ? "space" : "spaces"} found
+          </div>
         </div>
       </div>
 
       {isError && <ErrorState message="Unable to load venues right now." />}
 
       {isLoading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="space-y-3 animate-pulse">
-              <Skeleton className="aspect-[4/3] w-full rounded-xl" />
-              <Skeleton className="h-4 w-3/4 rounded" />
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="space-y-2 animate-pulse">
+              <Skeleton className="aspect-[3/4] w-full rounded-xl" />
+              <Skeleton className="h-3.5 w-3/4 rounded" />
               <Skeleton className="h-3 w-1/2 rounded" />
-              <Skeleton className="h-3 w-1/3 rounded" />
             </div>
           ))}
         </div>
       ) : rows.length === 0 ? (
         <div className="text-center py-20">
-          <p className="text-sm text-slate-400">No venues found</p>
-          <p className="text-xs text-slate-300 mt-1">Try adjusting your filters</p>
+          <p className="text-sm text-[#999]">No venues found</p>
+          <p className="text-xs text-[#ccc] mt-1">Try adjusting your filters</p>
         </div>
       ) : (
         <>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {rows.map((venue) => (
               <VenueCard key={venue.id} venue={venue} />
             ))}
@@ -135,7 +136,7 @@ export default function VenuesPage() {
           <Pagination
             page={filters.page ?? 1}
             total={total}
-            pageSize={filters.pageSize ?? 12}
+            pageSize={filters.pageSize ?? 16}
             onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
           />
         </>

@@ -10,8 +10,11 @@ class Venue(Base):
     id = Column(Integer,primary_key=True,nullable=False)
     name = Column(String,nullable=False)
     address = Column(String,nullable=False)
-    price = Column(Float,nullable=False)
+    city = Column(String,nullable=False)
+    price_per_day = Column(Float,nullable=True)
+    price_per_hour = Column(Float,nullable=True)
     capacity = Column(Integer,nullable=True)
+    booking_allowed_mode = Column(String,default="BOTH")
     availability = Column(Boolean,server_default='TRUE')
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
     owner_id = Column(Integer,ForeignKey("users.id", ondelete="CASCADE"),nullable=False)
@@ -33,6 +36,8 @@ class User(Base):
 
     venues = relationship("Venue",back_populates="owner",cascade="all,delete")
     bookings = relationship("Booking",back_populates="user")
+    owner = relationship("Owner",back_populates="user")
+
 
 class OTPVerification(Base):
     __tablename__ = "otp_verification"
@@ -51,10 +56,25 @@ class Booking(Base):
     user_id =  Column(Integer,ForeignKey("users.id"),nullable=False)
     venue_id = Column(Integer,ForeignKey("venues.id"),nullable=False)
 
+
     booking_date = Column(DateTime(timezone=True),nullable=False)
+    booking_mode = Column(String,nullable=False)
+    start_time = Column(DateTime(timezone=True),nullable=False)
+    end_time = Column(DateTime(timezone=True),nullable=False)
     status = Column(String,default="PENDING")
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
 
     venue = relationship("Venue",back_populates="bookings")
     user  = relationship("User",back_populates="bookings")
 
+class Owner(Base):
+    __tablename__ = "owner"
+
+    id = Column(Integer,primary_key=True,nullable=False)
+    first_name = Column(String,nullable=False)
+    last_name = Column(String,nullable=False)
+    dob = Column(DateTime(timezone=True),nullable=False)
+    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
+
+    user  = relationship("User",back_populates="owner")

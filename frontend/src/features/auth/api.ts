@@ -3,6 +3,7 @@ import type {
   SendOtpPayload,
   VerifyOtpPayload,
   VerifyOtpResponse,
+  UserProfile,
 } from "@/types/auth";
 
 export async function sendOtp(payload: SendOtpPayload) {
@@ -58,6 +59,45 @@ export async function getUsers() {
     id: String(u.id),
     phone: u.phone_number,
     role: u.role,
-    status: u.is_verified ? "Active" : "Inactive",
+    status: (u.account_status === false || u.account_status === 'f') ? "Blocked" : (u.is_verified ? "Active" : "Inactive"),
   }));
+}
+
+export interface UserProfilePayload {
+  first_name: string;
+  last_name: string;
+  dob: string;
+}
+
+export async function getUserProfile() {
+  const { data } = await apiClient.get<UserProfilePayload>("/user/profile");
+  return {
+    firstName: data.first_name,
+    lastName: data.last_name,
+    dob: data.dob,
+  } as UserProfile;
+}
+
+export async function updateUserProfile(payload: UserProfile) {
+  const backendPayload = {
+    first_name: payload.firstName,
+    last_name: payload.lastName,
+    dob: payload.dob,
+  };
+  const { data } = await apiClient.post<UserProfilePayload>("/user/profile", backendPayload);
+  return {
+    firstName: data.first_name,
+    lastName: data.last_name,
+    dob: data.dob,
+  } as UserProfile;
+}
+
+export async function blockUser(id: string) {
+  const { data } = await apiClient.post<any>(`/user/${id}/userblock`);
+  return data;
+}
+
+export async function unblockUser(id: string) {
+  const { data } = await apiClient.post<any>(`/user/${id}/userunblock`);
+  return data;
 }

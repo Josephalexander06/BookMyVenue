@@ -4,6 +4,9 @@ import type { Booking } from "@/types/booking";
 import type { Venue } from "@/types/venue";
 import { formatCurrency } from "@/lib/utils";
 
+import { useCancelBooking } from "@/features/bookings/hooks";
+import { useAuthStore } from "@/store/auth-store";
+
 const statusConfig = {
   pending: {
     label: "Pending",
@@ -20,10 +23,25 @@ const statusConfig = {
     pill: "bg-red-50 text-red-700 border-red-100",
     dot: "bg-red-500",
   },
+  cancelled: {
+    label: "Cancelled",
+    pill: "bg-slate-100 text-slate-600 border-slate-200",
+    dot: "bg-slate-400",
+  },
 };
 
 export function BookingCard({ booking, venue }: { booking: Booking; venue?: Venue }) {
   const status = statusConfig[booking.status] ?? statusConfig.pending;
+  const cancelBooking = useCancelBooking();
+  const user = useAuthStore((s) => s.user);
+  const isCustomer = user?.role === "customer";
+  const canCancel = isCustomer && booking.status !== "rejected" && booking.status !== "cancelled";
+
+  const handleCancel = async () => {
+    if (confirm("Are you sure you want to cancel this booking request?")) {
+      await cancelBooking.mutateAsync(booking.id);
+    }
+  };
 
   return (
     <div className="group rounded-xl border border-slate-100 bg-white p-4 transition-all duration-200 hover:border-slate-200 hover:shadow-soft flex gap-4">
@@ -70,12 +88,31 @@ export function BookingCard({ booking, venue }: { booking: Booking; venue?: Venu
           </div>
         </div>
 
-        {/* Pricing & Footer info */}
         <div className="flex items-baseline justify-between border-t border-slate-50 pt-2 mt-2">
-          <p className="text-[10px] text-slate-300 font-mono">ID: {booking.id}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] text-slate-300 font-mono">ID: {booking.id}</p>
+            {canCancel && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={cancelBooking.isPending}
+                className="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 px-1.5 py-0.5 rounded border border-red-100/50 hover:bg-red-100/50 transition-colors disabled:opacity-50"
+              >
+                {cancelBooking.isPending ? "Cancelling..." : "Cancel"}
+              </button>
+            )}
+          </div>
           {venue && (
             <p className="text-xs font-bold text-slate-900">
-              {formatCurrency(venue.pricing)} <span className="text-[10px] text-slate-400 font-normal">/ day</span>
+              {booking.mode === "HOURLY" ? (
+                <>
+                  {formatCurrency(venue.pricePerHour ?? 0)} <span className="text-[10px] text-slate-400 font-normal">/ hr</span>
+                </>
+              ) : (
+                <>
+                  {formatCurrency(venue.pricing)} <span className="text-[10px] text-slate-400 font-normal">/ day</span>
+                </>
+              )}
             </p>
           )}
         </div>
