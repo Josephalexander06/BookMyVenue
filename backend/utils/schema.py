@@ -54,5 +54,9 @@ class Bookings(BaseModel):
         from_attributes = True
     
 class Booking_Owner(Bookings):
+    id : int
     status : str
+    address : Optional[str] = None
+    venue_id : Optional[int] = None
+    customer_name : Optional[str] = None
 

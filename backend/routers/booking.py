@@ -44,23 +44,33 @@ def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int
     return new_booking
 
 @router.get("/",response_model=list[Booking_Owner])
-def recieved_request(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+def recieved_request(db:Session = Depends(get_db),current_user : tuple = Depends(get_current_user)):
 
-    bookings = db.query(Booking,Venue).join(Venue,Booking.venue_id == Venue.id).filter(Venue.owner_id == current_user[0]).all()
+    # Import User model to join and retrieve customer details
+    from models import User
+    
+    if current_user[1] == 'admin':
+        bookings = db.query(Booking, Venue, User).join(Venue, Booking.venue_id == Venue.id).join(User, Booking.user_id == User.id).all()
+    else:
+        bookings = db.query(Booking, Venue, User).join(Venue, Booking.venue_id == Venue.id).join(User, Booking.user_id == User.id).filter(Venue.owner_id == current_user[0]).all()
 
     result = []
 
-    for booking,venue in bookings:
+    for booking, venue, user in bookings:
         result.append({
-            "name":venue.name,
-            "booking_date":booking.booking_date,
-            "status":booking.status
+            "id": booking.id,
+            "name": venue.name,
+            "address": venue.address,
+            "booking_date": booking.booking_date,
+            "status": booking.status,
+            "venue_id": venue.id,
+            "customer_name": user.phone_number
         })
     
     return result
 
 @router.patch("/{id}/approve")
-def booking_approvel(id : int,db:Session=Depends(get_db),current_user : int = Depends(access_required)):
+def booking_approvel(id : int,db:Session=Depends(get_db),current_user : tuple = Depends(access_required)):
 
     booking_approval = db.query(Booking).filter(Booking.id == id).first()
     booking_approval.status = "APPROVED"
@@ -70,7 +80,7 @@ def booking_approvel(id : int,db:Session=Depends(get_db),current_user : int = De
 
 
 @router.patch("/{id}/reject")
-def booking_rejection(id : int,db:Session=Depends(get_db),current_user : int = Depends(access_required)):
+def booking_rejection(id : int,db:Session=Depends(get_db),current_user : tuple = Depends(access_required)):
 
     booking_approval = db.query(Booking).filter(Booking.id == id).first()
     booking_approval.status = "REJECTED"
@@ -80,19 +90,22 @@ def booking_rejection(id : int,db:Session=Depends(get_db),current_user : int = D
 
 
 @router.get("/mybooking")
-def my_bookings(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+def my_bookings(db:Session = Depends(get_db),current_user : tuple = Depends(get_current_user)):
 
     bookings = db.query(Booking,Venue).join(Venue,Booking.venue_id == Venue.id).filter(Booking.user_id == current_user[0]).all()
     
     result = []
 
     for book,venue in bookings:
-        if book.status == "APPROVED":
+        # if book.status == "APPROVED":
             result.append({
+                "id": book.id,
                 "name":venue.name,
                 "address":venue.address,
                 "booking_date":book.booking_date,
-                "status":book.status
+                "status":book.status,
+                "venue_id": venue.id
             })
 
     return result
+

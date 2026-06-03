@@ -10,3 +10,5 @@ backend/utils/__pycache__/schema.cpython-312.pyc
 backend/utils/__pycache__/db_helper.cpython-312.pyc
 backend/routers/__pycache__/booking.cpython-312.pyc
 backend/db.txt
+frontend/AGENTS.md
+frontend/CLAUDE.md

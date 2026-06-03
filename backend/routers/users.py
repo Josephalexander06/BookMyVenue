@@ -42,6 +42,7 @@ ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
 def send_otp_verification(phone_number:str,db:Session):
     otp = str(random.randint(100000,999999))
     expire_at = ist_now + timedelta(minutes=5)
+    print(otp)
     otp_hashed =  pwd_content.hash(otp)
     otp_record = OTPVerification(
         phone_number = phone_number,
@@ -124,5 +125,26 @@ async def get_user(db: Session = Depends(get_db),current_user : int = Depends(ge
     
     return {"phone_number":users.phone_number}
 
+@router.post("/owner")
+def become_owner(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+
+    user = db.query(User).filter(User.id == current_user[0]).first()
+
+    user.role = "owner"
+    db.commit()
+
+    return user
 
 
+@router.get("/getuser")
+def show_users(db:Session = Depends(get_db),current_user:int = Depends(admin_required)):
+
+    all_users = db.query(User).all()
+
+    result= []
+
+    for users in all_users:
+        if users.role != 'admin':
+            result.append(users)
+    
+    return result
