@@ -1,8 +1,8 @@
-from fastapi import FastAPI      
+from fastapi import FastAPI, Request
 from routers import booking,users,venue
 from utils.db_helper import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
-
+import time
 
 
 Base.metadata.create_all(bind=engine)
@@ -18,6 +18,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# @app.middleware("http")
+# async def log_time(request:Request,call_next):
+#     start = time.perf_counter()
+
+#     response = await call_next(request)
+
+#     duaration = time.perf_counter() - start
+#     print(f"{request.url.path}:{duaration:.3f}s")
+
+#     return response
 
 
 app.include_router(booking.router)
