@@ -18,6 +18,8 @@ router = APIRouter(
 UPLOAD_DIR  = "upload"
 os.makedirs(UPLOAD_DIR,exist_ok=True)
 
+
+
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[CreateVenue])
 async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:list[UploadFile] = File(...),db:Session=Depends(get_db),current_user:int = Depends(access_required)):
 
@@ -38,8 +40,8 @@ async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:
             f.write(content)
 
         image_record = models.ImageMetaData(
-            file_name = image.filename,
-            file_path = filepath,
+            image_name = image.filename,
+            image_path = filepath,
             venue_id = new_venue.id
         )
         db.add(image_record)
@@ -57,7 +59,7 @@ async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(ge
 
 
 @router.get("/",status_code=status.HTTP_200_OK,response_model=List[GetVenue])
-async def get_venue(q:Optional[str] = Query(None),db:Session=Depends(get_db)):
+async def get_venues(q:Optional[str] = Query(None),db:Session=Depends(get_db)):
 
     if q is not None:
         processed_query = " & ".join(f"{word}:*" for word in q.split())
@@ -70,15 +72,17 @@ async def get_venue(q:Optional[str] = Query(None),db:Session=Depends(get_db)):
 
 
 @router.get("/{id}",status_code=status.HTTP_200_OK,response_model=GetVenue)
-async def get_venues(id:int,db: Session = Depends(get_db)):
+async def get_venue(id:int,db: Session = Depends(get_db)):
     # print(id)
 
     venue = db.query(models.Venue).filter(models.Venue.id == id).first()
     if not venue:
         raise HTTPException(status_code=404,detail="Venue Not Found")
     
-    return venue
-
+    images = db.query(models.ImageMetaData).filter(models.ImageMetaData.venue_id == venue.id).all()
+    venue.images = images
+    
+    return  venue
 
 
 @router.put("/{id}",status_code=status.HTTP_200_OK,response_model=GetVenue)
@@ -128,3 +132,4 @@ def get_bookeddates(id:int,db:Session = Depends(get_db)):
             "booking_mode": b.booking_mode
         })
     return result   
+

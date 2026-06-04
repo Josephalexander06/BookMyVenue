@@ -85,8 +85,8 @@ class ImageMetaData(Base):
     __tablename__ = "venue_images"
 
     id = Column(Integer,primary_key=True,nullable=False)
-    file_name = Column(String,nullable=False)
-    file_path  = Column(String,nullable=False)
+    image_name = Column(String,nullable=False)
+    image_path  = Column(String,nullable=False)
     venue_id = Column(Integer,ForeignKey("venues.id"),nullable=False)
 
     venue = relationship("Venue",back_populates="image")

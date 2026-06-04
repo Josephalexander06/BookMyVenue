@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from routers import booking,users,venue
 from utils.db_helper import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
-import time
+from fastapi.staticfiles import StaticFiles
 
 
 Base.metadata.create_all(bind=engine)
@@ -36,6 +36,7 @@ app.include_router(users.router)
 app.include_router(venue.router)
 # app.include_router(google_auth.router)
 
+app.mount("/uploads",StaticFiles(directory="upload"),name="uploads")
 
 
 @app.get("/")

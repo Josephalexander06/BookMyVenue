@@ -39,9 +39,15 @@ class CreateVenue(Venue):
             capacity=capacity,
             booking_allowed_mode=booking_allowed_mode
         )
+class VenueImage(BaseModel):
+    id : int
+    image_path : str
+
+    class Config:
+        from_attributes = True
 
 class GetVenue(Venue):
-    id : int
+    image : list[VenueImage] = []
     class Config:
         from_attributes = True
 
