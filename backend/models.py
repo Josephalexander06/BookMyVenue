@@ -22,6 +22,7 @@ class Venue(Base):
 
     owner  = relationship("User",back_populates="venues")
     bookings = relationship("Booking",back_populates="venue")
+    image = relationship("ImageMetaData",back_populates="venue")
  
 
 class User(Base):
@@ -78,3 +79,15 @@ class Owner(Base):
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
 
     user  = relationship("User",back_populates="owner")
+
+
+class ImageMetaData(Base):
+    __tablename__ = "venue_images"
+
+    id = Column(Integer,primary_key=True,nullable=False)
+    file_name = Column(String,nullable=False)
+    file_path  = Column(String,nullable=False)
+    venue_id = Column(Integer,ForeignKey("venues.id"),nullable=False)
+
+    venue = relationship("Venue",back_populates="image")
+

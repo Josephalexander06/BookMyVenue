@@ -1,4 +1,6 @@
-from fastapi import Depends,status,HTTPException,Response,APIRouter, Query
+import os
+import uuid
+from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
 from utils.db_helper import get_db
 from utils.schema import CreateVenue, GetVenue
 import models
@@ -13,10 +15,12 @@ router = APIRouter(
     tags=["Venue"]
 )
 
+UPLOAD_DIR  = "upload"
+os.makedirs(UPLOAD_DIR,exist_ok=True)
 
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[CreateVenue])
-async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),current_user:int = Depends(access_required)):
-    # print(current_user)
+async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:list[UploadFile] = File(...),db:Session=Depends(get_db),current_user:int = Depends(access_required)):
+
     venue_data = {k: v for k, v in Venues.dict().items() if hasattr(models.Venue, k)}
     new_venue = models.Venue(**venue_data)
     new_venue.owner_id = current_user[0]
@@ -24,8 +28,25 @@ async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db),current_use
     db.commit()
     db.refresh(new_venue)
 
-    return [new_venue]
+    for image in images:
+        extension = image.filename.split(".")[-1]
+        unique_filename = f"{uuid.uuid4()}.{extension}"
+        filepath = os.path.join(UPLOAD_DIR,unique_filename)
 
+        content = await image.read()
+        with open(filepath,"wb") as f:
+            f.write(content)
+
+        image_record = models.ImageMetaData(
+            file_name = image.filename,
+            file_path = filepath,
+            venue_id = new_venue.id
+        )
+        db.add(image_record)
+
+    db.commit()
+
+    return [new_venue]
 
 
 @router.get("/Venue",status_code=status.HTTP_200_OK,response_model=List[GetVenue])

@@ -2,23 +2,43 @@ from pydantic import BaseModel,Field
 from pydantic_settings import BaseSettings
 from datetime import datetime,date
 from typing import Optional
+from fastapi import Form
 
 
 class Venue(BaseModel):
-    name : str
+    name : str 
     address : str
-    city : str = ""
+    city : str 
     price_per_day : Optional[float] = None
     price_per_hour : Optional[float] = None
     capacity : int | None = None
-    booking_allowed_mode : Optional[str] = "BOTH"
+    booking_allowed_mode : Optional[str] = "BOTH" 
 
     class Config:
         from_attributes = True
 
 class CreateVenue(Venue):
-    class Config:
-        from_attributes = True
+
+    @classmethod
+    def as_form(
+        cls,
+        name: str = Form(...),
+        address: str = Form(...),
+        city: str = Form(...),
+        price_per_day : float |None = Form(None),
+        price_per_hour: float | None = Form(None),
+        capacity : int = Form(...),
+        booking_allowed_mode : str = Form(...),
+    ):
+        return cls(
+            name=name,
+            address=address,
+            city=city,
+            price_per_day=price_per_day,
+            price_per_hour = price_per_hour,
+            capacity=capacity,
+            booking_allowed_mode=booking_allowed_mode
+        )
 
 class GetVenue(Venue):
     id : int
