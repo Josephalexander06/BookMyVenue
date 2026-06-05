@@ -45,3 +45,42 @@ To maintain a high standard of code, all Pull Requests must use our [standard te
 5. **Attach Screenshots** (If your PR includes UI changes).
 
 **BookMyVenue belongs to all of us. Join WeCode today and let's build something amazing together!**
+
+### Features
+1. **Authentication**
+- Phone number OTP Auth
+- JWT-based Auth
+- Role-Based Access Control
+
+2. **User Roles**
+ - Customer
+ - Owner
+ - Admin  
+
+3. **Venue Management**
+- Create Venue
+- Update Venue
+- Delete Venue
+- Venue Image Upload
+- Venue Image Retrieval
+
+4. **Booking System**
+- Create Booking Request
+- Owner Booking Managemnet
+- Booking Status Tracking
+- Booked by Date or Hours
+- Prevent Double Bookng
+
+5. **Search**
+   - PostgreSQL Full Text Search (FTS)
+
+
+### Tech Stack
+1. **Backend**
+- FastAPI
+- PostgreSQL
+- SQlAlchemy
+- Alembic
+- Pydantic
+- Jwt Auth
+
