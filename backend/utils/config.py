@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # GOOGLE_SECRET_ID: str
 
     model_config = SettingsConfigDict(
-        env_file=".env"
+        env_file="backend/.env"
     )
 
 settings = Settings()
