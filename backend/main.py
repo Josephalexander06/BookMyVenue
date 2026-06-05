@@ -1,100 +1,44 @@
-from fastapi import FastAPI,Response
-from pydantic import BaseModel 
-from starlette import status
-import models
-from schema import CreateVenue ,CreateUser
-from database import engine,Base
-from typing import List
-from database import get_db
-from fastapi import HTTPException, Depends
-from sqlalchemy.orm import Session
-from fastapi import APIRouter
-
-app = FastAPI()
+from fastapi import FastAPI, Request
+from routers import booking,users,venue
+from utils.db_helper import Base, engine
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 
 Base.metadata.create_all(bind=engine)
 
-router = APIRouter(
-    prefix='/Venues',
-    tags=['Venues']
+app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+# @app.middleware("http")
+# async def log_time(request:Request,call_next):
+#     start = time.perf_counter()
 
-# @app.get("/")
-# async def root():
-#     return {"message": "Hello World"}
+#     response = await call_next(request)
 
-@app.post("/",status_code=status.HTTP_201_CREATED,response_model=List[CreateVenue])
-async def create_venue(Venues:CreateVenue,db:Session=Depends(get_db)):
-    new_venue = models.Venue(**Venues.dict())
-    db.add(new_venue)
-    db.commit()
-    db.refresh(new_venue)
-    
-    return [new_venue]
+#     duaration = time.perf_counter() - start
+#     print(f"{request.url.path}:{duaration:.3f}s")
 
-@app.get("/",status_code=status.HTTP_200_OK,response_model=List[CreateVenue])
-async def get_venue(db:Session=Depends(get_db)):
-    venues  = db.query(models.Venue).all()
-    return venues
-
-@app.get("/{id}",status_code=status.HTTP_200_OK,response_model=CreateVenue)
-async def get_venues(id:int,db: Session = Depends(get_db)):
-    # print(id)
-
-    venue = db.query(models.Venue).filter(models.Venue.id == id).first()
-    if not venue:
-        raise HTTPException(status_code=404,detail="Venue Not Found")
-    
-    return venue
-
-@app.put("/{id}",status_code=status.HTTP_200_OK,response_model=CreateVenue)
-async def update_venue(id:int,updated_data:CreateVenue,db:Session=Depends(get_db)):
-    fetch_venue = db.query(models.Venue).filter(models.Venue.id == id)
-    exiting_v = fetch_venue.first()
-
-    if not fetch_venue:
-        raise HTTPException(status_code=404,detail="Venue Not Found")
-
-    fetch_venue.update(updated_data.dict(),synchronize_session=False)
-    db.commit()
-    
-    updated_venue = fetch_venue.first()
-    return updated_venue
-
-@app.delete("/{id}",status_code=status.HTTP_204_NO_CONTENT)
-async def delete_venue(id:int,db:Session=Depends(get_db)):
-    venue_query = db.query(models.Venue).filter(models.Venue.id == id)
-    venue = venue_query.first()
-
-    if not venue_query:
-        raise HTTPException(status_code=404,detail="Venue Not Found")
-
-    venue_query.delete(synchronize_session=False)
-    db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+#     return response
 
 
+app.include_router(booking.router)
+app.include_router(users.router)
+app.include_router(venue.router)
+# app.include_router(google_auth.router)
 
-@app.post("/user",status_code=status.HTTP_201_CREATED,response_model=List[CreateUser])
-async def create_user(Users:CreateUser,db:Session=Depends(get_db)):
-    new_user = models.User(**Users.dict())
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    return [new_user]
+app.mount("/uploads",StaticFiles(directory="upload"),name="uploads")
 
 
-@app.get("/user/{id}",status_code=status.HTTP_200_OK,response_model=CreateUser)
-async def get_user(id:int,db: Session = Depends(get_db)):
-    # print(id)
-
-    user = db.query(models.User).filter(models.User.id == id).first()
-    if not user:
-        raise HTTPException(status_code=404,detail="user Not Found")
-    
-    return user
-
-
+@app.get("/")
+def home():
+    return {"message": "Welcome to FastAPI OAuth2 Authentication!"}
