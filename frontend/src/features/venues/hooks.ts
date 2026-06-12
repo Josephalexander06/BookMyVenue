@@ -55,9 +55,10 @@ export function useDeleteVenue() {
 }
 
 export function useBookedDates(id: string) {
+  const isNumeric = id ? /^\d+$/.test(id) : false;
   return useQuery({
     queryKey: ["booked-dates", id],
     queryFn: () => getBookedDates(id),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && isNumeric,
   });
 }

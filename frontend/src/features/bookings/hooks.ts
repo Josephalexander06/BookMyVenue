@@ -31,6 +31,7 @@ export function useCreateBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booked-dates"] });
     },
   });
 }
@@ -42,6 +43,7 @@ export function useApproveBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booked-dates"] });
     },
   });
 }
@@ -53,6 +55,7 @@ export function useRejectBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booked-dates"] });
     },
   });
 }
@@ -64,6 +67,7 @@ export function useCancelBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booked-dates"] });
     },
   });
 }

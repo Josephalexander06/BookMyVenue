@@ -79,7 +79,7 @@ class Settings(BaseSettings):
 class Bookings(BaseModel):
        name : Optional[str] = None
        venue_id : Optional[int] = None
-       booking_date : datetime | date 
+       booking_date : Optional[date] = None  
        start_time : Optional[datetime] = None
        end_time : Optional[datetime] = None
        mode : Optional[str] = None

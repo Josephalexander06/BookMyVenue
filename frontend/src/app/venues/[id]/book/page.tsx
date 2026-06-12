@@ -30,6 +30,33 @@ const TIME_OPTIONS = [
   { label: "10:00 PM", value: "22:00" },
 ];
 
+// Helper to construct timezone-aware ISO string in local browser time
+const toLocalISOString = (dateObj: Date) => {
+  const tzo = -dateObj.getTimezoneOffset();
+  const dif = tzo >= 0 ? "+" : "-" ;
+  const pad = (num: number) => String(Math.floor(Math.abs(num))).padStart(2, "0");
+  const ms = String(dateObj.getMilliseconds()).padStart(3, "0");
+  return (
+    dateObj.getFullYear() +
+    "-" +
+    pad(dateObj.getMonth() + 1) +
+    "-" +
+    pad(dateObj.getDate()) +
+    "T" +
+    pad(dateObj.getHours()) +
+    ":" +
+    pad(dateObj.getMinutes()) +
+    ":" +
+    pad(dateObj.getSeconds()) +
+    "." +
+    ms +
+    dif +
+    pad(tzo / 60) +
+    ":" +
+    pad(tzo % 60)
+  );
+};
+
 // Helper to parse timezone-aware datetime to local date YYYY-MM-DD
 const getLocalDateString = (isoString: string) => {
   if (!isoString) return "";
@@ -60,16 +87,61 @@ const getLocalTimeString = (isoString: string) => {
   return `${hours}:${minutes}`;
 };
 
+// Helper to get all YYYY-MM-DD dates in a range
+const getDatesInRange = (startIso: string, endIso: string) => {
+  const dates: string[] = [];
+  if (!startIso || !endIso) return dates;
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  
+  // Set times to midday to avoid timezone edge cases
+  start.setHours(12, 0, 0, 0);
+  end.setHours(12, 0, 0, 0);
+  
+  const current = new Date(start);
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+    dates.push(`${year}-${month}-${day}`);
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+};
+
+// Helper to calculate days between two dates inclusive
+const getDaysBetween = (startStr: string, endStr: string) => {
+  if (!startStr || !endStr) return 0;
+  const start = new Date(startStr + "T12:00:00");
+  const end = new Date(endStr + "T12:00:00");
+  const diffTime = end.getTime() - start.getTime();
+  if (diffTime < 0) return 0;
+  return Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
+
 interface CalendarProps {
-  selectedDate: string;
-  onChange: (date: string) => void;
+  mode: "DAILY" | "HOURLY";
+  selectedDate?: string;
+  onChangeSingle?: (date: string) => void;
+  checkInDate?: string;
+  checkOutDate?: string;
+  onChangeRange?: (checkIn: string, checkOut: string | null) => void;
   bookedDates: string[];
 }
 
 // Custom Premium Inline Calendar
-function InlineCalendar({ selectedDate, onChange, bookedDates }: CalendarProps) {
+function InlineCalendar({
+  mode,
+  selectedDate,
+  onChangeSingle,
+  checkInDate,
+  checkOutDate,
+  onChangeRange,
+  bookedDates,
+}: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(() => {
-    return selectedDate ? new Date(selectedDate + "T12:00:00") : new Date();
+    const defaultDate = mode === "DAILY" ? checkInDate : selectedDate;
+    return defaultDate ? new Date(defaultDate + "T12:00:00") : new Date();
   });
 
   const year = currentDate.getFullYear();
@@ -145,6 +217,47 @@ function InlineCalendar({ selectedDate, onChange, bookedDates }: CalendarProps) 
     return year > maxDate.getFullYear() || (year === maxDate.getFullYear() && month >= maxDate.getMonth());
   }, [year, month, maxDate]);
 
+  const isCellDisabled = (dateStr: string) => {
+    const isBooked = bookedDates.includes(dateStr);
+    const isPast = dateStr < todayStr;
+    const isFutureLimit = dateStr > maxDateStr;
+
+    if (isBooked || isPast || isFutureLimit) return true;
+
+    if (mode === "DAILY" && checkInDate && !checkOutDate) {
+      if (dateStr > checkInDate) {
+        const range = getDatesInRange(checkInDate + "T00:00:00", dateStr + "T23:59:59");
+        const hasBooked = range.some((d) => bookedDates.includes(d));
+        if (hasBooked) return true;
+      }
+    }
+
+    return false;
+  };
+
+  const handleDayClick = (clickedDate: string) => {
+    if (mode === "HOURLY") {
+      onChangeSingle?.(clickedDate);
+      return;
+    }
+
+    if (!checkInDate || (checkInDate && checkOutDate)) {
+      onChangeRange?.(clickedDate, null);
+    } else {
+      if (clickedDate < checkInDate) {
+        onChangeRange?.(clickedDate, null);
+      } else {
+        const range = getDatesInRange(checkInDate + "T00:00:00", clickedDate + "T23:59:59");
+        const hasBooked = range.some((d) => bookedDates.includes(d));
+        if (hasBooked) {
+          onChangeRange?.(clickedDate, null);
+        } else {
+          onChangeRange?.(checkInDate, clickedDate);
+        }
+      }
+    }
+  };
+
   return (
     <div className="w-full bg-white border border-slate-200 rounded-2xl p-4 shadow-soft max-w-sm">
       {/* Calendar Navigation */}
@@ -192,11 +305,8 @@ function InlineCalendar({ selectedDate, onChange, bookedDates }: CalendarProps) 
             return <div key={`pad-${idx}`} className="aspect-square" />;
           }
 
+          const isDisabled = isCellDisabled(cell.dateStr);
           const isBooked = bookedDates.includes(cell.dateStr);
-          const isPast = cell.dateStr < todayStr;
-          const isFutureLimit = cell.dateStr > maxDateStr;
-          const isSelected = cell.dateStr === selectedDate;
-          const isDisabled = isBooked || isPast || isFutureLimit;
 
           if (isBooked) {
             return (
@@ -205,7 +315,7 @@ function InlineCalendar({ selectedDate, onChange, bookedDates }: CalendarProps) 
                 title="Booked Date"
                 className="aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold bg-rose-50/30 border border-dashed border-rose-200 text-slate-350 cursor-not-allowed relative"
               >
-                <span className="line-through decoration-dashed decoration-rose-400">
+                <span className="line-through decoration-dashed decoration-rose-400 font-sans">
                   {cell.dayNum}
                 </span>
                 <span className="absolute top-0.5 right-1 text-[8px] font-bold text-rose-500">
@@ -215,24 +325,45 @@ function InlineCalendar({ selectedDate, onChange, bookedDates }: CalendarProps) 
             );
           }
 
+          const isSelected = mode === "HOURLY"
+            ? cell.dateStr === selectedDate
+            : (cell.dateStr === checkInDate || cell.dateStr === checkOutDate);
+
+          const isCheckIn = mode === "DAILY" && cell.dateStr === checkInDate;
+          const isCheckOut = mode === "DAILY" && cell.dateStr === checkOutDate;
+          const isInRange = mode === "DAILY" && checkInDate && checkOutDate && cell.dateStr > checkInDate && cell.dateStr < checkOutDate;
+
+          let btnClass = "aspect-square flex items-center justify-center text-xs font-bold transition-all relative ";
+
+          if (isDisabled) {
+            btnClass += "text-slate-350 bg-slate-50/40 cursor-not-allowed";
+          } else if (isSelected) {
+            btnClass += "bg-[#F84464] text-white shadow-soft ";
+            if (isCheckIn && checkOutDate && checkOutDate !== checkInDate) {
+              btnClass += "rounded-l-xl rounded-r-none";
+            } else if (isCheckOut && checkInDate && checkOutDate !== checkInDate) {
+              btnClass += "rounded-r-xl rounded-l-none";
+            } else {
+              btnClass += "rounded-xl";
+            }
+          } else if (isInRange) {
+            btnClass += "bg-rose-50/70 text-[#F84464] rounded-none hover:bg-rose-100/50";
+          } else {
+            btnClass += "text-slate-700 hover:bg-slate-100 rounded-xl";
+          }
+
           return (
             <button
               key={cell.dateStr}
               type="button"
               disabled={isDisabled}
-              onClick={() => onChange(cell.dateStr)}
-              className={`aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all relative ${
-                isSelected
-                  ? "bg-[#F84464] text-white shadow-soft"
-                  : isDisabled
-                  ? "text-slate-350 bg-slate-50/40 cursor-not-allowed"
-                  : "text-slate-700 hover:bg-slate-100"
-              }`}
+              onClick={() => handleDayClick(cell.dateStr)}
+              className={btnClass}
             >
               <span className={isDisabled ? "line-through opacity-70" : ""}>
                 {cell.dayNum}
               </span>
-              {cell.dateStr === todayStr && !isSelected && (
+              {cell.dateStr === todayStr && !isSelected && !isInRange && (
                 <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#F84464]" />
               )}
             </button>
@@ -248,7 +379,7 @@ export default function BookingPage() {
   const router = useRouter();
   const createBooking = useCreateBooking();
   const { data: venue, isLoading: venueLoading } = useVenue(params.id);
-  const { data: bookedSlots } = useBookedDates(params.id);
+  const { data: bookedSlots } = useBookedDates(venue?.id || params.id);
 
   const [bookingMode, setBookingMode] = useState<"DAILY" | "HOURLY">("DAILY");
   
@@ -261,11 +392,36 @@ export default function BookingPage() {
     return `${y}-${m}-${d}`;
   });
 
+  const [checkInDate, setCheckInDate] = useState(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  });
+
+  const [checkOutDate, setCheckOutDate] = useState<string | null>(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  });
+
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showStartPop, setShowStartPop] = useState(false);
+  const [showEndPop, setShowEndPop] = useState(false);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
   const [note, setNote] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Close all calendar/time dropdowns when switching mode
+  useEffect(() => {
+    setShowCalendar(false);
+    setShowStartPop(false);
+    setShowEndPop(false);
+  }, [bookingMode]);
 
   const venuePrice = venue?.pricing ?? 0;
 
@@ -279,6 +435,16 @@ export default function BookingPage() {
       }
     }
   }, [venue]);
+
+  // Synchronize date selection when switching modes
+  useEffect(() => {
+    if (bookingMode === "DAILY" && date) {
+      setCheckInDate(date);
+      setCheckOutDate(date);
+    } else if (bookingMode === "HOURLY" && checkInDate) {
+      setDate(checkInDate);
+    }
+  }, [bookingMode]);
 
   // Booked slots/intervals calculations
   const bookedIntervalsForSelectedDate = useMemo(() => {
@@ -295,29 +461,38 @@ export default function BookingPage() {
       });
   }, [date, bookedSlots, bookingMode]);
 
-  const isDateBookedDaily = useMemo(() => {
-    if (!date || !bookedSlots) return false;
-    return bookedSlots.some((slot) => {
-      const slotDate = getLocalDateString(slot.start_time || slot.booking_date);
-      return slotDate === date && slot.booking_mode === "DAILY";
+  // List of all unavailable dates (fully booked days or days with daily bookings)
+  const bookedDatesList = useMemo(() => {
+    if (!bookedSlots) return [];
+    const dates = new Set<string>();
+    
+    bookedSlots.forEach((slot) => {
+      const start = slot.start_time || slot.booking_date;
+      const end = slot.end_time || slot.booking_date;
+      if (!start) return;
+      
+      const datesInSlot = getDatesInRange(start, end || start);
+      
+      if (bookingMode === "DAILY") {
+        // In DAILY mode, any booking of any mode blocks the entire day
+        datesInSlot.forEach(d => dates.add(d));
+      } else {
+        // In HOURLY mode, only DAILY bookings block the entire day
+        if (slot.booking_mode === "DAILY") {
+          datesInSlot.forEach(d => dates.add(d));
+        }
+      }
     });
-  }, [date, bookedSlots]);
-
-  const isDateUnavailableForDaily = useMemo(() => {
-    if (!date || !bookedSlots || bookingMode !== "DAILY") return false;
-    return bookedSlots.some((slot) => {
-      const slotDate = getLocalDateString(slot.start_time || slot.booking_date);
-      return slotDate === date;
-    });
-  }, [date, bookedSlots, bookingMode]);
+    
+    return Array.from(dates).sort();
+  }, [bookedSlots, bookingMode]);
 
   const isDateConflict = useMemo(() => {
-    if (bookingMode === "DAILY") {
-      return isDateUnavailableForDaily;
-    } else {
-      return isDateBookedDaily;
+    if (bookingMode === "HOURLY") {
+      return bookedDatesList.includes(date);
     }
-  }, [bookingMode, isDateUnavailableForDaily, isDateBookedDaily]);
+    return false;
+  }, [bookingMode, bookedDatesList, date]);
 
   // Helper to check if a specific hour is booked
   const isTimeBooked = (timeStr: string) => {
@@ -367,27 +542,20 @@ export default function BookingPage() {
     }
   }, [filteredEndOptions, bookingMode, endTime]);
 
-  // List of all unavailable dates (fully booked days)
-  const bookedDatesList = useMemo(() => {
-    if (!bookedSlots) return [];
-    const dates = new Set<string>();
-    bookedSlots.forEach((slot) => {
-      const slotDate = getLocalDateString(slot.start_time || slot.booking_date);
-      if (slotDate) {
-        if (slot.booking_mode === "DAILY" || bookingMode === "DAILY") {
-          dates.add(slotDate);
-        }
-      }
-    });
-    return Array.from(dates).sort();
-  }, [bookedSlots, bookingMode]);
-
   // Check if a day in hourly mode has no slots left
   const isHourlyDayFullyBooked = useMemo(() => {
     return bookingMode === "HOURLY" && date !== "" && filteredStartOptions.length === 0;
   }, [bookingMode, date, filteredStartOptions]);
 
-  const isBookingBlocked = Boolean(isDateConflict || isHourlyDayFullyBooked);
+  const isBookingBlocked = useMemo(() => {
+    if (bookingMode === "DAILY") {
+      if (!checkInDate || !checkOutDate) return true;
+      const range = getDatesInRange(checkInDate + "T00:00:00", checkOutDate + "T23:59:59");
+      return range.some((d) => bookedDatesList.includes(d));
+    } else {
+      return Boolean(isDateConflict || isHourlyDayFullyBooked);
+    }
+  }, [bookingMode, checkInDate, checkOutDate, bookedDatesList, isDateConflict, isHourlyDayFullyBooked]);
 
   // Calculate hourly rate (use pricePerHour from venue or fallback to daily / 8)
   const hourlyRate = useMemo(() => {
@@ -397,10 +565,11 @@ export default function BookingPage() {
   // Calculate duration and base price
   const billingDetails = useMemo(() => {
     if (bookingMode === "DAILY") {
-      const base = venuePrice;
+      const numDays = (checkInDate && checkOutDate) ? getDaysBetween(checkInDate, checkOutDate) : 1;
+      const base = venuePrice * numDays;
       const fee = Math.round(base * 0.05);
       return {
-        durationText: "1 Day",
+        durationText: `${numDays} ${numDays === 1 ? "Day" : "Days"}`,
         rateText: `${formatCurrency(venuePrice)} / day`,
         basePrice: base,
         fee: fee,
@@ -420,7 +589,15 @@ export default function BookingPage() {
         total: base + fee,
       };
     }
-  }, [bookingMode, venuePrice, hourlyRate, startTime, endTime]);
+  }, [bookingMode, venuePrice, hourlyRate, startTime, endTime, checkInDate, checkOutDate]);
+
+  const handleRangeChange = (checkIn: string, checkOut: string | null) => {
+    setCheckInDate(checkIn);
+    setCheckOutDate(checkOut);
+    if (checkOut !== null) {
+      setShowCalendar(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -438,6 +615,11 @@ export default function BookingPage() {
         setErrorMsg("End time must be after start time.");
         return;
       }
+    } else {
+      if (!checkInDate || !checkOutDate) {
+        setErrorMsg("Please select a check-out date.");
+        return;
+      }
     }
 
     try {
@@ -448,19 +630,20 @@ export default function BookingPage() {
       if (bookingMode === "HOURLY") {
         const startDt = new Date(`${date}T${startTime}:00`);
         const endDt = new Date(`${date}T${endTime}:00`);
-        requestDate = startDt.toISOString();
-        startIso = startDt.toISOString();
-        endIso = endDt.toISOString();
+        requestDate = date;
+        startIso = toLocalISOString(startDt);
+        endIso = toLocalISOString(endDt);
       } else {
-        const dailyDt = new Date(`${date}T00:00:00`);
-        requestDate = dailyDt.toISOString();
-        startIso = dailyDt.toISOString();
-        const endDt = new Date(`${date}T23:59:59`);
-        endIso = endDt.toISOString();
+        const end = checkOutDate || checkInDate;
+        const dailyDt = new Date(`${checkInDate}T00:00:00`);
+        requestDate = checkInDate;
+        startIso = toLocalISOString(dailyDt);
+        const endDt = new Date(`${end}T23:59:59`);
+        endIso = toLocalISOString(endDt);
       }
 
       await createBooking.mutateAsync({
-        venueId: params.id,
+        venueId: venue?.id || params.id,
         date: requestDate,
         attendees: 1,
         note: note || undefined,
@@ -478,8 +661,18 @@ export default function BookingPage() {
         router.push("/dashboard/customer");
       }
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err?.response?.data?.detail ?? "Failed to create booking request. Please check slot availability.");
+      console.warn(err);
+      const detail = err?.response?.data?.detail;
+      if (typeof detail === "string") {
+        setErrorMsg(detail);
+      } else if (Array.isArray(detail)) {
+        const messages = detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ");
+        setErrorMsg(messages || "Validation error");
+      } else if (detail && typeof detail === "object") {
+        setErrorMsg(detail.msg || JSON.stringify(detail));
+      } else {
+        setErrorMsg(err?.message ?? "Failed to create booking request. Please check slot availability.");
+      }
     }
   };
 
@@ -580,108 +773,251 @@ export default function BookingPage() {
               </div>
             )}
 
-            {/* Date Select Dropdown Box */}
-            <div className="space-y-3 relative">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Select Event Date
-              </label>
-              
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowCalendar(!showCalendar)}
-                  className="w-full flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm hover:border-[#F84464]/40 transition-colors focus:outline-none focus:ring-2 focus:ring-[#F84464]/20 focus:border-[#F84464]"
-                >
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-4.5 w-4.5 text-[#F84464]" />
-                    <span className="text-sm font-bold text-slate-850">
-                      {date ? formatLocalDateReadable(date) : "Choose a date..."}
-                    </span>
-                  </div>
-                  <span className="text-xs text-[#F84464] font-bold">
-                    {showCalendar ? "Close Calendar" : "Change Date"}
-                  </span>
-                </button>
+            {/* Date Selection Dropdown Block */}
+            {bookingMode === "DAILY" ? (
+              <div className="space-y-3 relative">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Select Dates
+                </label>
+                
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    className="w-full grid grid-cols-2 rounded-2xl border border-slate-200 bg-white shadow-sm hover:border-[#F84464]/45 transition-colors focus:outline-none focus:ring-2 focus:ring-[#F84464]/20 focus:border-[#F84464] overflow-hidden text-left"
+                  >
+                    <div className="px-4 py-3 flex flex-col justify-center border-r border-slate-100">
+                      <span className="text-[10px] font-bold text-[#F84464] uppercase tracking-wider">
+                        Check-in
+                      </span>
+                      <span className="text-sm font-bold text-slate-800 mt-0.5 truncate">
+                        {checkInDate ? formatLocalDateReadable(checkInDate) : "Add date"}
+                      </span>
+                    </div>
+                    <div className="px-4 py-3 flex flex-col justify-center">
+                      <span className="text-[10px] font-bold text-[#F84464] uppercase tracking-wider">
+                        Check-out
+                      </span>
+                      <span className="text-sm font-bold text-slate-800 mt-0.5 truncate">
+                        {checkOutDate ? formatLocalDateReadable(checkOutDate) : "Add date"}
+                      </span>
+                    </div>
+                  </button>
 
-                {showCalendar && (
-                  <div className="absolute left-0 top-full mt-2 z-20 w-full max-w-sm animate-fade-in">
-                    <InlineCalendar
-                      selectedDate={date}
-                      onChange={(d) => {
-                        setDate(d);
-                        setShowCalendar(false);
-                      }}
-                      bookedDates={bookedDatesList}
-                    />
+                  {showCalendar && (
+                    <div className="absolute left-0 top-full mt-2 z-20 w-full max-w-sm animate-fade-in bg-white">
+                      <InlineCalendar
+                        mode="DAILY"
+                        checkInDate={checkInDate}
+                        checkOutDate={checkOutDate || undefined}
+                        onChangeRange={handleRangeChange}
+                        bookedDates={bookedDatesList}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Conflict Warnings */}
+                {isBookingBlocked && (
+                  <div className="rounded-2xl bg-rose-50 border border-rose-100/50 p-4 text-xs font-bold text-rose-600 flex items-center gap-2.5">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>Selected dates overlap with an existing booking. Please choose a different range.</span>
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="space-y-3 relative">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Select Event Date
+                </label>
+                
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCalendar(!showCalendar);
+                      setShowStartPop(false);
+                      setShowEndPop(false);
+                    }}
+                    className="w-full flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm hover:border-[#F84464]/40 transition-colors focus:outline-none focus:ring-2 focus:ring-[#F84464]/20 focus:border-[#F84464]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4.5 w-4.5 text-[#F84464]" />
+                      <span className="text-sm font-bold text-slate-850">
+                        {date ? formatLocalDateReadable(date) : "Choose a date..."}
+                      </span>
+                    </div>
+                    <span className="text-xs text-[#F84464] font-bold">
+                      {showCalendar ? "Close Calendar" : "Change Date"}
+                    </span>
+                  </button>
 
-              {/* Conflict Warnings */}
-              {isDateConflict && (
-                <div className="rounded-2xl bg-rose-50 border border-rose-100/50 p-4 text-xs font-bold text-rose-600 flex items-center gap-2.5">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>This date is fully booked. Please choose a different date.</span>
+                  {showCalendar && (
+                    <div className="absolute left-0 top-full mt-2 z-20 w-full max-w-sm animate-fade-in bg-white">
+                      <InlineCalendar
+                        mode="HOURLY"
+                        selectedDate={date}
+                        onChangeSingle={(d) => {
+                          setDate(d);
+                          setShowCalendar(false);
+                        }}
+                        bookedDates={bookedDatesList}
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {isHourlyDayFullyBooked && (
-                <div className="rounded-2xl bg-rose-50 border border-rose-100/50 p-4 text-xs font-bold text-rose-600 flex items-center gap-2.5">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>All hourly timeslots on this day are already booked.</span>
-                </div>
-              )}
-            </div>
+                {/* Conflict Warnings */}
+                {isDateConflict && (
+                  <div className="rounded-2xl bg-rose-50 border border-rose-100/50 p-4 text-xs font-bold text-rose-600 flex items-center gap-2.5">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>This date is fully booked. Please choose a different date.</span>
+                  </div>
+                )}
+
+                {isHourlyDayFullyBooked && (
+                  <div className="rounded-2xl bg-rose-50 border border-rose-100/50 p-4 text-xs font-bold text-rose-600 flex items-center gap-2.5">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>All hourly timeslots on this day are already booked.</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Hourly Slot Selection */}
             {bookingMode === "HOURLY" && !isDateConflict && date && (
-              <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                <div className="space-y-2.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Start Time
-                  </label>
-                  <div className="relative rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm hover:border-[#F84464]/40 transition-colors focus-within:ring-2 focus-within:ring-[#F84464]/20 focus-within:border-[#F84464] flex items-center">
-                    <Clock className="h-4 w-4 text-slate-400 mr-2" />
-                    <select
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="w-full bg-transparent text-sm font-bold outline-none text-slate-800 cursor-pointer"
+              <div className="space-y-3 relative">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Select Time Slot
+                </label>
+                
+                <div className="relative">
+                  <div className="w-full grid grid-cols-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden text-left">
+                    {/* Start Time Box */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowStartPop(!showStartPop);
+                        setShowEndPop(false);
+                        setShowCalendar(false);
+                      }}
+                      className="px-4 py-3 flex flex-col justify-center border-r border-slate-100 hover:bg-slate-50/50 transition-colors text-left"
                     >
-                      {filteredStartOptions.length > 0 ? (
-                        filteredStartOptions.map((t) => (
-                          <option key={t.value} value={t.value} className="font-semibold text-slate-800">
-                            {t.label}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="" disabled>No slots available</option>
-                      )}
-                    </select>
+                      <span className="text-[10px] font-bold text-[#F84464] uppercase tracking-wider">
+                        Start Time
+                      </span>
+                      <span className="text-sm font-bold text-slate-800 mt-0.5 truncate">
+                        {startTime ? TIME_OPTIONS.find(o => o.value === startTime)?.label : "Select time"}
+                      </span>
+                    </button>
+                    
+                    {/* End Time Box */}
+                    <button
+                      type="button"
+                      disabled={!startTime}
+                      onClick={() => {
+                        setShowStartPop(false);
+                        setShowEndPop(!showEndPop);
+                        setShowCalendar(false);
+                      }}
+                      className="px-4 py-3 flex flex-col justify-center hover:bg-slate-50/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                    >
+                      <span className="text-[10px] font-bold text-[#F84464] uppercase tracking-wider">
+                        End Time
+                      </span>
+                      <span className="text-sm font-bold text-slate-800 mt-0.5 truncate">
+                        {endTime ? TIME_OPTIONS.find(o => o.value === endTime)?.label : "Select time"}
+                      </span>
+                    </button>
                   </div>
-                </div>
 
-                <div className="space-y-2.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    End Time
-                  </label>
-                  <div className="relative rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm hover:border-[#F84464]/40 transition-colors focus-within:ring-2 focus-within:ring-[#F84464]/20 focus-within:border-[#F84464] flex items-center">
-                    <Clock className="h-4 w-4 text-slate-400 mr-2" />
-                    <select
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="w-full bg-transparent text-sm font-bold outline-none text-slate-800 cursor-pointer"
-                    >
-                      {filteredEndOptions.length > 0 ? (
-                        filteredEndOptions.map((t) => (
-                          <option key={t.value} value={t.value} className="font-semibold text-slate-800">
-                            {t.label}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="" disabled>Select start time</option>
-                      )}
-                    </select>
-                  </div>
+                  {/* Popover for Start Time Grid */}
+                  {showStartPop && (
+                    <div className="absolute left-0 top-full mt-2 z-20 w-full animate-fade-in bg-white border border-slate-200 rounded-3xl p-4 shadow-lg">
+                      <div className="flex justify-between items-center mb-2.5 px-1">
+                        <span className="text-xs font-bold text-slate-800">Select Start Time</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowStartPop(false)}
+                          className="text-[10px] font-bold text-[#F84464]"
+                        >
+                          Done
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-50/50 p-2.5 rounded-2xl border border-slate-100">
+                        {TIME_OPTIONS.map((opt) => {
+                          const isBooked = isTimeBooked(opt.value);
+                          const isSelected = startTime === opt.value;
+                          return (
+                            <button
+                              key={`start-pop-${opt.value}`}
+                              type="button"
+                              disabled={isBooked}
+                              onClick={() => {
+                                setStartTime(opt.value);
+                                setShowStartPop(false);
+                                setShowEndPop(true);
+                              }}
+                              className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border ${
+                                isSelected
+                                  ? "bg-[#F84464] border-[#F84464] text-white shadow-soft"
+                                  : isBooked
+                                  ? "bg-slate-100/70 border-slate-200 text-slate-300 cursor-not-allowed line-through"
+                                  : "bg-white border-slate-200 text-slate-700 hover:border-[#F84464]/30 hover:bg-[#F84464]/5"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Popover for End Time Grid */}
+                  {showEndPop && startTime && (
+                    <div className="absolute left-0 top-full mt-2 z-20 w-full animate-fade-in bg-white border border-slate-200 rounded-3xl p-4 shadow-lg">
+                      <div className="flex justify-between items-center mb-2.5 px-1">
+                        <span className="text-xs font-bold text-slate-800">Select End Time</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowEndPop(false)}
+                          className="text-[10px] font-bold text-[#F84464]"
+                        >
+                          Done
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-50/50 p-2.5 rounded-2xl border border-slate-100">
+                        {TIME_OPTIONS.map((opt) => {
+                          const isAfterStart = opt.value > startTime;
+                          const isPastNextBooked = nextBookedStartTime && opt.value > nextBookedStartTime;
+                          const isValid = isAfterStart && !isPastNextBooked;
+                          const isSelected = endTime === opt.value;
+
+                          return (
+                            <button
+                              key={`end-pop-${opt.value}`}
+                              type="button"
+                              disabled={!isValid}
+                              onClick={() => {
+                                setEndTime(opt.value);
+                                setShowEndPop(false);
+                              }}
+                              className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border ${
+                                isSelected && isValid
+                                  ? "bg-[#F84464] border-[#F84464] text-white shadow-soft"
+                                  : !isValid
+                                  ? "bg-slate-100/50 border-slate-100 text-slate-300 cursor-not-allowed opacity-50"
+                                  : "bg-white border-slate-200 text-slate-700 hover:border-[#F84464]/30 hover:bg-[#F84464]/5"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -710,7 +1046,7 @@ export default function BookingPage() {
 
             <Button
               type="submit"
-              disabled={createBooking.isPending || !date || isBookingBlocked}
+              disabled={createBooking.isPending || (bookingMode === "HOURLY" ? !date : (!checkInDate || !checkOutDate)) || isBookingBlocked}
               className="w-full h-12 rounded-2xl bg-[#F84464] hover:bg-[#e03d5a] text-white text-sm font-bold shadow-soft transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {createBooking.isPending ? "Submitting Request..." : "Confirm & Send Booking Request"}
@@ -733,7 +1069,7 @@ export default function BookingPage() {
                   />
                 </div>
                 <div className="min-w-0 flex flex-col justify-center">
-                  <h4 className="text-sm font-bold text-slate-800 truncate">{venue.name}</h4>
+                  <h4 className="text-sm font-bold text-slate-850 truncate">{venue.name}</h4>
                   <p className="text-[11px] text-slate-400 flex items-center gap-0.5 mt-0.5 font-medium truncate">
                     <MapPin className="h-3 w-3 shrink-0" />
                     {venue.location}

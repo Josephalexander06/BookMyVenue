@@ -170,45 +170,45 @@ def show_users(db:Session = Depends(get_db),current_user:int = Depends(admin_req
     return result
 
 
-# @router.get("/profile")
-# def get_profile(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
-#     profile = db.query(Owner).filter(Owner.user_id == current_user[0]).first()
-#     if not profile:
-#         return {
-#             "first_name": "",
-#             "last_name": "",
-#             "dob": None
-#         }
-#     return {
-#         "first_name": profile.first_name,
-#         "last_name": profile.last_name,
-#         "dob": profile.dob.date().isoformat() if profile.dob else None
-#     }
+@router.get("/profile")
+def get_profile(db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+    profile = db.query(Owner).filter(Owner.user_id == current_user[0]).first()
+    if not profile:
+        return {
+            "first_name": "",
+            "last_name": "",
+            "dob": None
+        }
+    return {
+        "first_name": profile.first_name,
+        "last_name": profile.last_name,
+        "dob": profile.dob.date().isoformat() if profile.dob else None
+    }
 
 
-# @router.post("/profile")
-# def create_or_update_profile(user_data : Profile,db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
+@router.post("/profile")
+def create_or_update_profile(user_data : Profile,db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
 
-#     profile = db.query(Owner).filter(Owner.user_id == current_user[0]).first()
-#     dob_dt = datetime.combine(user_data.dob, datetime.min.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+    profile = db.query(Owner).filter(Owner.user_id == current_user[0]).first()
+    dob_dt = datetime.combine(user_data.dob, datetime.min.time()).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
     
-#     if profile:
-#         profile.first_name = user_data.first_name
-#         profile.last_name = user_data.last_name
-#         profile.dob = dob_dt
-#     else:
-#         profile = Owner(
-#             first_name = user_data.first_name,
-#             last_name = user_data.last_name,
-#             dob = dob_dt,
-#             user_id = current_user[0]
-#         )
-#         db.add(profile)
+    if profile:
+        profile.first_name = user_data.first_name
+        profile.last_name = user_data.last_name
+        profile.dob = dob_dt
+    else:
+        profile = Owner(
+            first_name = user_data.first_name,
+            last_name = user_data.last_name,
+            dob = dob_dt,
+            user_id = current_user[0]
+        )
+        db.add(profile)
         
-#     db.commit()
-#     db.refresh(profile)
+    db.commit()
+    db.refresh(profile)
 
-#     return profile
+    return profile
 
 @router.post("/{id}/userblock")
 def block_user(id:int,db:Session= Depends(get_db),current_user : int = Depends(admin_required)):

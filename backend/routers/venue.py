@@ -1,5 +1,5 @@
 import os
-import uuid
+from uuid_extensions import uuid7
 from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
 from utils.db_helper import get_db
 from utils.schema import CreateVenue, GetVenue
@@ -32,7 +32,7 @@ async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:
 
     for image in images:
         extension = image.filename.split(".")[-1]
-        unique_filename = f"{uuid.uuid4()}.{extension}"
+        unique_filename = f"{uuid7()}.{extension}"
         filepath = os.path.join(UPLOAD_DIR,unique_filename)
 
         content = await image.read()

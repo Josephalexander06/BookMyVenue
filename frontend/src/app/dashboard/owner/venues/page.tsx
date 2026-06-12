@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import {
 import { CreateVenuePayload, Venue } from "@/types/venue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { MapPin, Plus, Trash2, Users, Pencil, IndianRupee } from "lucide-react";
+import { MapPin, Plus, Trash2, Users, Pencil, IndianRupee, ImagePlus, X } from "lucide-react";
 
 const links = [
   { href: "/dashboard/owner", label: "Overview" },
@@ -60,15 +60,18 @@ export default function OwnerVenuesPage() {
   const [form, setForm] = useState<CreateVenuePayload>(emptyForm);
   const [editing, setEditing] = useState<Venue | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const submit = async () => {
     if (editing) {
       await updateVenue.mutateAsync({ id: editing.id, payload: form });
       setEditing(null);
     } else {
-      await createVenue.mutateAsync(form);
+      await createVenue.mutateAsync({ ...form, imageFiles: selectedFiles });
     }
     setForm(emptyForm);
+    setSelectedFiles([]);
     setDialogOpen(false);
   };
 
@@ -93,6 +96,7 @@ export default function OwnerVenuesPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setSelectedFiles([]);
     setDialogOpen(true);
   };
 
@@ -289,6 +293,54 @@ export default function OwnerVenuesPage() {
                       <option value="event_venue">Event Venue</option>
                     </Select>
                   </div>
+
+                  {/* Image Upload (only for create, not edit) */}
+                  {!editing && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-slate-700">Venue Images</label>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full h-24 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:border-[#F84464]/40 hover:text-[#F84464] transition-colors bg-slate-50/50"
+                      >
+                        <ImagePlus className="h-6 w-6" />
+                        <span className="text-xs font-semibold">Click to upload images</span>
+                      </button>
+                      {selectedFiles.length > 0 && (
+                        <div className="flex gap-2 flex-wrap pt-1">
+                          {selectedFiles.map((file, idx) => (
+                            <div key={idx} className="relative h-16 w-16 rounded-lg overflow-hidden border border-slate-200 group">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={file.name}
+                                className="h-full w-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                                className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-slate-900/60 text-white flex items-center justify-center hover:bg-slate-900 transition-colors"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <Button

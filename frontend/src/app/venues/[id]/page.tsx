@@ -102,15 +102,45 @@ export default function VenueDetailPage() {
       </div>
 
       {/* Gallery Frame */}
-      <div className="relative h-[300px] w-full overflow-hidden rounded-3xl bg-slate-100 sm:h-[450px] shadow-soft border border-slate-100">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={venue.imageUrl || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"}
-          alt={venue.name}
-          className="h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
-      </div>
+      {venue.images && venue.images.length > 1 ? (
+        <div className="grid grid-cols-4 gap-2 h-[300px] sm:h-[450px] overflow-hidden rounded-3xl border border-slate-100 shadow-soft">
+          {/* Main large image */}
+          <div className="col-span-2 row-span-2 relative overflow-hidden bg-slate-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={venue.images[0].image_path}
+              alt={venue.name}
+              className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+          {/* Smaller images */}
+          {venue.images.slice(1, 5).map((img, idx) => (
+            <div key={img.id} className="relative overflow-hidden bg-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={img.image_path}
+                alt={`${venue.name} photo ${idx + 2}`}
+                className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+              />
+              {idx === 3 && venue.images!.length > 5 && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">+{venue.images!.length - 5} more</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="relative h-[300px] w-full overflow-hidden rounded-3xl bg-slate-100 sm:h-[450px] shadow-soft border border-slate-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={venue.imageUrl || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"}
+            alt={venue.name}
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+        </div>
+      )}
 
       {/* Detail Layout */}
       <div className="mt-8 grid gap-8 lg:grid-cols-[1.6fr_1fr]">

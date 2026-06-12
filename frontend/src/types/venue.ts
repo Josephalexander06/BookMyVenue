@@ -8,6 +8,11 @@ export type VenueType =
   | "community_center"
   | "event_venue";
 
+export interface VenueImage {
+  id: number;
+  image_path: string;
+}
+
 export interface Venue {
   id: string;
   name: string;
@@ -21,6 +26,7 @@ export interface Venue {
   pricePerHour?: number;
   allowedModes?: "DAILY" | "HOURLY" | "BOTH";
   imageUrl?: string;
+  images?: VenueImage[];
   ownerName?: string;
   ownerPhone?: string;
   availability?: string;
@@ -57,4 +63,5 @@ export interface CreateVenuePayload {
   pricePerHour?: number;
   allowedModes?: "DAILY" | "HOURLY" | "BOTH";
   imageUrl?: string;
+  imageFiles?: File[];
 }

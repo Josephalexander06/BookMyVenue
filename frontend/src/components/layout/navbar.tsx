@@ -18,20 +18,12 @@ import { useState, useRef, useEffect, Suspense } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { roleRoutes } from "@/lib/config";
 import type { UserRole } from "@/types/auth";
+import { useUserProfile, useBecomeOwner } from "@/features/auth/hooks";
+import { useQueryClient } from "@tanstack/react-query";
 
 /* ─── Constants ──────────────────────────────────────────────── */
 
-const CITIES = [
-  "All Cities",
-  "Mumbai",
-  "Delhi",
-  "Bangalore",
-  "Chennai",
-  "Kochi",
-  "Hyderabad",
-  "Pune",
-  "Kolkata",
-] as const;
+
 
 const CATEGORY_TABS = [
   { label: "All", value: "" },
@@ -50,7 +42,10 @@ function NavbarInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, isAuthenticated, logout, openLogin } = useAuthStore();
+  const queryClient = useQueryClient();
+  const becomeOwner = useBecomeOwner();
+  const { data: profile } = useUserProfile();
+  const { user, isAuthenticated, logout, openLogin, login } = useAuthStore();
 
   const handleLogout = () => {
     logout();
@@ -60,16 +55,31 @@ function NavbarInner() {
     }, 100);
   };
 
+  const handleBecomeHost = async () => {
+    try {
+      const res = await becomeOwner.mutateAsync();
+      if (res?.access_token && res?.user) {
+        login(res.access_token, {
+          id: String(res.user.id),
+          name: `User ${res.user.id}`,
+          phone: res.user.phone_number,
+          role: res.user.role,
+        });
+        queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+        router.push("/dashboard/owner");
+      }
+    } catch (err) {
+      console.error("Failed to upgrade to host:", err);
+    }
+  };
+
   /* State */
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCity, setSelectedCity] = useState<string>("All Cities");
-  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
   /* Refs */
-  const cityRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
 
@@ -77,9 +87,6 @@ function NavbarInner() {
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
-      if (cityRef.current && !cityRef.current.contains(target)) {
-        setCityDropdownOpen(false);
-      }
       if (profileRef.current && !profileRef.current.contains(target)) {
         setProfileDropdownOpen(false);
       }
@@ -93,7 +100,6 @@ function NavbarInner() {
 
   /* Close everything on route change */
   useEffect(() => {
-    setCityDropdownOpen(false);
     setProfileDropdownOpen(false);
     setMobileMenuOpen(false);
   }, [pathname]);
@@ -164,45 +170,15 @@ function NavbarInner() {
 
           {/* ── Right Section ── */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* City Dropdown (hidden on mobile) */}
-            <div className="relative hidden md:block" ref={cityRef}>
+            {isAuthenticated && user?.role === "customer" && (
               <button
-                onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-white/80 transition-all hover:bg-white/10 hover:text-white"
+                onClick={handleBecomeHost}
+                disabled={becomeOwner.isPending}
+                className="hidden md:inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-[13px] font-semibold text-white transition-all hover:bg-white/10 hover:border-white/30 active:scale-[0.97]"
               >
-                <MapPin className="h-3.5 w-3.5" />
-                <span className="max-w-[80px] truncate text-[13px] font-medium">
-                  {selectedCity}
-                </span>
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition-transform duration-200 ${
-                    cityDropdownOpen ? "rotate-180" : ""
-                  }`}
-                />
+                {becomeOwner.isPending ? "Switching..." : "Switch to hosting"}
               </button>
-
-              {cityDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-100 bg-white py-1.5 shadow-hover animate-fade-in z-50">
-                  {CITIES.map((city) => (
-                    <button
-                      key={city}
-                      onClick={() => {
-                        setSelectedCity(city);
-                        setCityDropdownOpen(false);
-                      }}
-                      className={`flex w-full items-center gap-2.5 px-4 py-2 text-left text-[13px] font-medium transition-colors ${
-                        selectedCity === city
-                          ? "bg-accent-light text-accent"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      <MapPin className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
-                      {city}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Auth: Sign In or Avatar */}
             {!isAuthenticated ? (
@@ -221,8 +197,12 @@ function NavbarInner() {
                   style={{ backgroundColor: "#F84464" }}
                   aria-label="User menu"
                 >
-                  {user?.role?.substring(0, 1).toUpperCase() ?? (
-                    <User className="h-4 w-4" />
+                  {profile?.firstName && profile?.lastName ? (
+                    `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
+                  ) : (
+                    user?.role?.substring(0, 1).toUpperCase() ?? (
+                      <User className="h-4 w-4" />
+                    )
                   )}
                 </button>
 
@@ -233,7 +213,12 @@ function NavbarInner() {
                       <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
                         Account
                       </p>
-                      <p className="mt-0.5 truncate text-sm font-semibold text-gray-800">
+                      {profile?.firstName && profile?.lastName ? (
+                        <p className="mt-0.5 truncate text-sm font-semibold text-gray-800">
+                          {profile.firstName} {profile.lastName}
+                        </p>
+                      ) : null}
+                      <p className="text-xs text-gray-500 truncate mt-0.5">
                         {user?.phone}
                       </p>
                       <span
@@ -257,13 +242,23 @@ function NavbarInner() {
                         Dashboard
                       </Link>
                       {user?.role === "customer" && (
-                        <Link
-                          href="/dashboard/customer/profile"
-                          className="mx-1 flex items-center gap-2.5 rounded-lg px-3.5 py-2 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                        >
-                          <User className="h-4 w-4 text-gray-400" />
-                          My Profile
-                        </Link>
+                        <>
+                          <button
+                            onClick={handleBecomeHost}
+                            disabled={becomeOwner.isPending}
+                            className="mx-1 flex w-[calc(100%-8px)] items-center gap-2.5 rounded-lg px-3.5 py-2 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-50 text-left"
+                          >
+                            <Building2 className="h-4 w-4 text-gray-400" />
+                            Switch to hosting
+                          </button>
+                          <Link
+                            href="/dashboard/customer/profile"
+                            className="mx-1 flex items-center gap-2.5 rounded-lg px-3.5 py-2 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                          >
+                            <User className="h-4 w-4 text-gray-400" />
+                            My Profile
+                          </Link>
+                        </>
                       )}
                       <Link
                         href="/venues"
@@ -333,33 +328,6 @@ function NavbarInner() {
               </div>
             )}
 
-            {/* Mobile City Pills */}
-            <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                Select City
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {CITIES.map((city) => (
-                  <button
-                    key={city}
-                    onClick={() => setSelectedCity(city)}
-                    className={`rounded-full px-3 py-1 text-[12px] font-medium transition-all ${
-                      selectedCity === city
-                        ? "text-white"
-                        : "border border-white/15 text-white/60 hover:border-white/30 hover:text-white/90"
-                    }`}
-                    style={
-                      selectedCity === city
-                        ? { backgroundColor: "#F84464" }
-                        : {}
-                    }
-                  >
-                    {city}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Mobile Nav Links */}
             <div className="space-y-1 border-t border-white/10 pt-3">
               <Link
@@ -373,6 +341,19 @@ function NavbarInner() {
 
               {isAuthenticated && user ? (
                 <>
+                  {user.role === "customer" && (
+                    <button
+                      onClick={() => {
+                        handleBecomeHost();
+                        setMobileMenuOpen(false);
+                      }}
+                      disabled={becomeOwner.isPending}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                      <Building2 className="h-4 w-4 opacity-60" />
+                      {becomeOwner.isPending ? "Switching..." : "Switch to hosting"}
+                    </button>
+                  )}
                   <Link
                     href={dashboardRoute}
                     className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"

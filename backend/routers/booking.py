@@ -21,7 +21,6 @@ ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=Bookings)
 def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
     
-    # Query with row lock on the venue to prevent race conditions during concurrent bookings
     if book.venue_id is not None:
         v_id = db.query(Venue).filter(Venue.id == book.venue_id).with_for_update().first()
     else:
@@ -31,11 +30,10 @@ def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int
         raise HTTPException(status_code=404,detail="Venue not found")
     
     today = date.today()
-    booking_day = book.booking_date.date() if isinstance(book.booking_date, datetime) else book.booking_date
+    booking_day = book.start_time.date() if isinstance(book.start_time, datetime) else book.start_time
     if booking_day < today:
         raise HTTPException(status_code=404,detail="Cant book older date")
     
-    # Defensively compute start/end times if null
     start_t = book.start_time
     end_t = book.end_time
     if start_t is None:
@@ -60,7 +58,7 @@ def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int
         booking_mode = book.mode or "DAILY",
         start_time = start_t,
         end_time = end_t,
-        booking_date = book.booking_date,
+        # booking_date = book.booking_date,
         created_at = ist_now
     )
 
