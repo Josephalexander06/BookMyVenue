@@ -60,7 +60,8 @@ export async function getVenues(
       description: v.description ?? `A premium space for events and meetings: ${v.name}`,
       capacity: v.capacity ?? 50,
       location: v.address,
-      city: v.city,
+      latitude: v.latitude !== undefined && v.latitude !== null ? Number(v.latitude) : undefined,
+      longitude: v.longitude !== undefined && v.longitude !== null ? Number(v.longitude) : undefined,
       type: v.type ?? "meeting_room",
       amenities: v.amenities ?? ["WiFi", "Parking"],
       pricing: v.price_per_day ?? v.price ?? 500,
@@ -99,7 +100,8 @@ export async function getVenueById(id: string): Promise<Venue> {
         description: found.description ?? `A premium space for events and meetings: ${found.name}`,
         capacity: found.capacity ?? 50,
         location: found.address,
-        city: found.city,
+        latitude: found.latitude !== undefined && found.latitude !== null ? Number(found.latitude) : undefined,
+        longitude: found.longitude !== undefined && found.longitude !== null ? Number(found.longitude) : undefined,
         type: found.type ?? "meeting_room",
         amenities: found.amenities ?? ["WiFi", "Parking"],
         pricing: found.price_per_day ?? found.price ?? 500,
@@ -120,7 +122,8 @@ export async function getVenueById(id: string): Promise<Venue> {
     description: data.description ?? `A premium space for events and meetings: ${data.name}`,
     capacity: data.capacity ?? 50,
     location: data.address,
-    city: data.city,
+    latitude: data.latitude !== undefined && data.latitude !== null ? Number(data.latitude) : undefined,
+    longitude: data.longitude !== undefined && data.longitude !== null ? Number(data.longitude) : undefined,
     type: data.type ?? "meeting_room",
     amenities: data.amenities ?? ["WiFi", "Parking"],
     pricing: data.price_per_day ?? data.price ?? 500,
@@ -137,9 +140,14 @@ export async function createVenue(payload: CreateVenuePayload): Promise<Venue> {
   const formData = new FormData();
   formData.append("name", payload.name);
   formData.append("address", payload.location);
-  formData.append("city", payload.city ?? "");
   formData.append("capacity", String(payload.capacity));
   formData.append("booking_allowed_mode", payload.allowedModes || "BOTH");
+  if (payload.latitude !== undefined && payload.latitude !== null) {
+    formData.append("latitude", String(payload.latitude));
+  }
+  if (payload.longitude !== undefined && payload.longitude !== null) {
+    formData.append("longitude", String(payload.longitude));
+  }
 
   if (payload.allowedModes !== "HOURLY") {
     formData.append("price_per_day", String(payload.pricing));
@@ -166,7 +174,8 @@ export async function createVenue(payload: CreateVenuePayload): Promise<Venue> {
     description: res.description ?? `A premium space for events and meetings: ${res.name}`,
     capacity: res.capacity ?? 50,
     location: res.address,
-    city: res.city,
+    latitude: res.latitude !== undefined && res.latitude !== null ? Number(res.latitude) : undefined,
+    longitude: res.longitude !== undefined && res.longitude !== null ? Number(res.longitude) : undefined,
     type: res.type ?? "meeting_room",
     amenities: res.amenities ?? ["WiFi", "Parking"],
     pricing: res.price_per_day ?? res.price ?? 500,
@@ -185,11 +194,12 @@ export async function updateVenue(
   const backendPayload = {
     name: payload.name,
     address: payload.location,
-    city: payload.city ?? "",
     price_per_day: payload.allowedModes ? (payload.allowedModes === "HOURLY" ? null : payload.pricing) : payload.pricing,
     capacity: payload.capacity,
     price_per_hour: payload.allowedModes ? (payload.allowedModes === "DAILY" ? null : payload.pricePerHour) : payload.pricePerHour,
     booking_allowed_mode: payload.allowedModes,
+    latitude: payload.latitude,
+    longitude: payload.longitude,
   };
   const { data } = await apiClient.put<any>(`/venues/${id}`, backendPayload);
   const images = mapImages(data.image);
@@ -199,7 +209,8 @@ export async function updateVenue(
     description: data.description ?? `A premium space for events and meetings: ${data.name}`,
     capacity: data.capacity ?? 50,
     location: data.address,
-    city: data.city,
+    latitude: data.latitude !== undefined && data.latitude !== null ? Number(data.latitude) : undefined,
+    longitude: data.longitude !== undefined && data.longitude !== null ? Number(data.longitude) : undefined,
     type: data.type ?? "meeting_room",
     amenities: data.amenities ?? ["WiFi", "Parking"],
     pricing: data.price_per_day ?? data.price ?? 500,

@@ -58,7 +58,7 @@ def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int
         booking_mode = book.mode or "DAILY",
         start_time = start_t,
         end_time = end_t,
-        # booking_date = book.booking_date,
+        booking_date = start_t,
         created_at = ist_now
     )
 

@@ -19,7 +19,8 @@ export interface Venue {
   description: string;
   capacity: number;
   location: string;
-  city?: string;
+  latitude?: number;
+  longitude?: number;
   type: VenueType;
   amenities: string[];
   pricing: number;
@@ -56,7 +57,8 @@ export interface CreateVenuePayload {
   description: string;
   capacity: number;
   location: string;
-  city?: string;
+  latitude?: number;
+  longitude?: number;
   type: VenueType;
   amenities: string[];
   pricing: number;

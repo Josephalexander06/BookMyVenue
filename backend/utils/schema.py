@@ -1,4 +1,5 @@
 from pydantic import BaseModel,Field
+from pydantic_extra_types.coordinate import Latitude,Longitude
 from pydantic_settings import BaseSettings
 from datetime import datetime,date
 from typing import Optional
@@ -8,11 +9,12 @@ from fastapi import Form
 class Venue(BaseModel):
     name : str 
     address : str
-    city : str 
     price_per_day : Optional[float] = None
     price_per_hour : Optional[float] = None
     capacity : int | None = None
     booking_allowed_mode : Optional[str] = "BOTH" 
+    latitude : Optional[float] = None
+    longitude : Optional[float] = None
 
     class Config:
         from_attributes = True
@@ -24,20 +26,22 @@ class CreateVenue(Venue):
         cls,
         name: str = Form(...),
         address: str = Form(...),
-        city: str = Form(...),
         price_per_day : float |None = Form(None),
         price_per_hour: float | None = Form(None),
         capacity : int = Form(...),
         booking_allowed_mode : str = Form(...),
+        latitude: Optional[float] = Form(None),
+        longitude: Optional[float] = Form(None),
     ):
         return cls(
             name=name,
             address=address,
-            city=city,
             price_per_day=price_per_day,
             price_per_hour = price_per_hour,
             capacity=capacity,
-            booking_allowed_mode=booking_allowed_mode
+            booking_allowed_mode=booking_allowed_mode,
+            latitude=latitude,
+            longitude=longitude,
         )
 class VenueImage(BaseModel):
     id : int
@@ -79,7 +83,7 @@ class Settings(BaseSettings):
 class Bookings(BaseModel):
        name : Optional[str] = None
        venue_id : Optional[int] = None
-       booking_date : Optional[date] = None  
+       booking_date : Optional[datetime] = None  
        start_time : Optional[datetime] = None
        end_time : Optional[datetime] = None
        mode : Optional[str] = None
@@ -98,5 +102,19 @@ class Profile(BaseModel):
     first_name : str
     last_name : str
     dob : date
+    class Config:
+        from_attributes = True
+
+
+class getSearch(BaseModel):
+    latitude : str
+    longitude : str
+    class Config:
+        from_attributes = True
+
+class Nearbycitys(BaseModel):
+    lat : Latitude
+    lon : Longitude
+    km_within:int = Field(gt=0) 
     class Config:
         from_attributes = True

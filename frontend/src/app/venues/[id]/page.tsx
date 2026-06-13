@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useVenue } from "@/features/venues/hooks";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
+import VenueMap from "@/components/ui/venue-map";
 
 // Map amenities to icons
 const amenityIcons: Record<string, any> = {
@@ -187,7 +188,7 @@ export default function VenueDetailPage() {
           </div>
 
           {/* Amenities list */}
-          <div>
+          <div className="border-b border-slate-100 pb-6">
             <h3 className="text-lg font-bold text-slate-900">What this venue offers</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {venue.amenities.map((amenity) => {
@@ -200,6 +201,15 @@ export default function VenueDetailPage() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Venue Map */}
+          <div>
+            <VenueMap
+              latitude={venue.latitude}
+              longitude={venue.longitude}
+              address={venue.location}
+            />
           </div>
 
         </div>

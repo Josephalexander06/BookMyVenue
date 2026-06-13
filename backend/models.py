@@ -1,7 +1,8 @@
 from utils.db_helper import Base
-from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime, ForeignKey
+from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime, ForeignKey, DECIMAL
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import TSVECTOR
+from geoalchemy2 import Geography
 
 
 class Venue(Base):
@@ -10,7 +11,8 @@ class Venue(Base):
     id = Column(Integer,primary_key=True,nullable=False)
     name = Column(String,nullable=False)
     address = Column(String,nullable=False)
-    city = Column(String,nullable=False)
+    latitude = Column(DECIMAL,nullable=False)
+    longitude = Column(DECIMAL,nullable=False)
     price_per_day = Column(Float,nullable=True)
     price_per_hour = Column(Float,nullable=True)
     capacity = Column(Integer,nullable=True)
@@ -19,6 +21,8 @@ class Venue(Base):
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
     owner_id = Column(Integer,ForeignKey("users.id", ondelete="CASCADE"),nullable=False)
     search_vector  = Column(TSVECTOR,nullable=False)
+    location = Column(Geography("POINT",srid=4320))
+
 
     owner  = relationship("User",back_populates="venues")
     bookings = relationship("Booking",back_populates="venue")
@@ -58,7 +62,7 @@ class Booking(Base):
     venue_id = Column(Integer,ForeignKey("venues.id"),nullable=False)
 
 
-    booking_date = Column(DateTime(timezone=True),nullable=False)
+    booking_date = Column(DateTime(timezone=True))
     booking_mode = Column(String,nullable=False)
     start_time = Column(DateTime(timezone=True),nullable=False)
     end_time = Column(DateTime(timezone=True),nullable=False)

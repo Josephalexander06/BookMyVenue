@@ -19,6 +19,7 @@ import { CreateVenuePayload, Venue } from "@/types/venue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { MapPin, Plus, Trash2, Users, Pencil, IndianRupee, ImagePlus, X } from "lucide-react";
+import MapPicker from "@/components/ui/map-picker";
 
 const links = [
   { href: "/dashboard/owner", label: "Overview" },
@@ -31,7 +32,8 @@ const emptyForm: CreateVenuePayload = {
   description: "",
   capacity: 25,
   location: "",
-  city: "",
+  latitude: undefined,
+  longitude: undefined,
   type: "meeting_room",
   amenities: [],
   pricing: 1000,
@@ -82,7 +84,8 @@ export default function OwnerVenuesPage() {
       description: venue.description,
       capacity: venue.capacity,
       location: venue.location,
-      city: venue.city ?? "",
+      latitude: venue.latitude,
+      longitude: venue.longitude,
       type: venue.type,
       amenities: venue.amenities,
       pricing: venue.pricing,
@@ -154,7 +157,7 @@ export default function OwnerVenuesPage() {
             }
           }}>
 
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <div className="space-y-6">
                 <div>
                   <DialogTitle className="text-xl font-bold text-slate-900">
@@ -251,26 +254,31 @@ export default function OwnerVenuesPage() {
                     )}
                   </div>
 
-                  {/* Place & Address */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700">Place</label>
-                      <Input
-                        placeholder="e.g. Kochi"
-                        value={form.city ?? ""}
-                        onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
-                        className="h-11 rounded-xl border-slate-200"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700">Address</label>
-                      <Input
-                        placeholder="Full address"
-                        value={form.location}
-                        onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
-                        className="h-11 rounded-xl border-slate-200"
-                      />
-                    </div>
+                  {/* Address */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700">Address</label>
+                    <Input
+                      placeholder="Full address (or click map below to auto-fill)"
+                      value={form.location}
+                      onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                      className="h-11 rounded-xl border-slate-200"
+                    />
+                  </div>
+
+                  {/* Map Pin Selector */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700">Map Pin Location</label>
+                    <MapPicker
+                      latitude={form.latitude}
+                      longitude={form.longitude}
+                      defaultAddress={form.location}
+                      onChange={(lat, lng) =>
+                        setForm((p) => ({ ...p, latitude: lat, longitude: lng }))
+                      }
+                      onAddressChange={(address) =>
+                        setForm((p) => ({ ...p, location: address }))
+                      }
+                    />
                   </div>
 
                   {/* Type */}
