@@ -18,7 +18,7 @@ function CustomerProfileInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const isUpgrade = searchParams.get("upgrade") === "true";
-  
+
   const { data: profile, isLoading } = useUserProfile();
   const updateProfile = useUpdateUserProfile();
   const becomeOwner = useBecomeOwner();
@@ -27,7 +27,7 @@ function CustomerProfileInner() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dob, setDob] = useState("");
-  
+
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [isUpgradingState, setIsUpgradingState] = useState(false);
@@ -93,7 +93,7 @@ function CustomerProfileInner() {
         lastName,
         dob,
       });
-      
+
       if (isUpgrade) {
         // If they want to upgrade, trigger it immediately after updating profile
         await handleUpgrade();
@@ -107,7 +107,7 @@ function CustomerProfileInner() {
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[260px,1fr]">
+    <div className="space-y-8 font-sans text-slate-800">
       <DashboardSidebar links={links} />
       <div className="space-y-8 animate-fade-in">
         {/* Header */}
@@ -139,7 +139,7 @@ function CustomerProfileInner() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* First Name */}
                 <div className="space-y-2">

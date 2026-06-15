@@ -105,7 +105,7 @@ export default function OwnerVenuesPage() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-8 lg:grid-cols-[260px,1fr]">
+      <div className="space-y-8 font-sans">
         <DashboardSidebar links={links} />
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -132,7 +132,7 @@ export default function OwnerVenuesPage() {
   const venues = data?.items ?? [];
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[260px,1fr]">
+    <div className="h-full overflow-y-auto p-6 md:p-8 pb-16 font-sans text-slate-800">
       <DashboardSidebar links={links} />
 
       <div className="space-y-6">
@@ -143,7 +143,7 @@ export default function OwnerVenuesPage() {
           </h1>
 
           <Button
-            onClick={openCreate}
+            onClick={() => router.push("/dashboard/owner/venues/new")}
             className="gap-2 rounded-xl shadow-soft transition-all hover:shadow-hover"
           >
             <Plus className="h-4 w-4" />
@@ -299,6 +299,9 @@ export default function OwnerVenuesPage() {
                       <option value="auditorium">Auditorium</option>
                       <option value="community_center">Community Center</option>
                       <option value="event_venue">Event Venue</option>
+                      <option value="cafe">Café</option>
+                      <option value="convention_hall">Convention Hall</option>
+                      <option value="outdoor">Outdoor Space</option>
                     </Select>
                   </div>
 

@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { 
-  ArrowRight, 
-  ChevronRight, 
-  Sparkles, 
-  Search, 
-  MapPin, 
-  Users, 
+import {
+  ArrowRight,
+  ChevronRight,
+  Sparkles,
+  Search,
+  MapPin,
+  Users,
   SlidersHorizontal
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -73,7 +73,7 @@ export default function Home() {
                 Discover and book unique spaces for events, meetings, and gatherings.
               </p>
             </div>
-            
+
             {/* Explore Badge */}
             <div className="hidden md:flex items-center gap-3 shrink-0">
               <div className="flex items-center gap-2.5 rounded-2xl border border-slate-150 px-4 py-3 bg-slate-50/50 shadow-soft">
@@ -117,13 +117,15 @@ export default function Home() {
                     onChange={(e) => setSearchType(e.target.value)}
                     className="w-full text-sm font-semibold text-slate-800 outline-none bg-transparent cursor-pointer"
                   >
-                    <option value="">All Spaces</option>
+                    <option value="">All</option>
                     <option value="meeting_room">Meeting Rooms</option>
                     <option value="cafe">Cafes</option>
                     <option value="auditorium">Auditoriums</option>
                     <option value="studio">Studios</option>
+                    <option value="outdoor">Outdoor</option>
                     <option value="event_venue">Event Venues</option>
-                    <option value="outdoor">Outdoor Spaces</option>
+                    <option value="community_center">Community Centers</option>
+                    <option value="convention_hall">Convention Halls</option>
                   </select>
                 </div>
               </div>
@@ -236,8 +238,8 @@ export default function Home() {
             {!isAuthenticated
               ? "Get started"
               : user?.role === "owner" || user?.role === "admin"
-              ? "Manage spaces"
-              : "Become a host"}
+                ? "Manage spaces"
+                : "Become a host"}
           </button>
         </div>
       </section>
@@ -274,7 +276,7 @@ function VenueRow({
       {isLoading ? (
         <div className="scroll-row">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="w-[176px] sm:w-[200px] shrink-0">
+            <div key={i} className="w-[200px] sm:w-[240px] shrink-0">
               <Skeleton className="aspect-[3/4] w-full rounded-xl" />
               <Skeleton className="h-3.5 w-3/4 rounded mt-2" />
               <Skeleton className="h-3 w-1/2 rounded mt-1" />
@@ -284,7 +286,9 @@ function VenueRow({
       ) : venues.length > 0 ? (
         <div className="scroll-row">
           {venues.map((venue) => (
-            <VenueCard key={venue.id} venue={venue} />
+            <div key={venue.id} className="w-[200px] sm:w-[240px] shrink-0">
+              <VenueCard venue={venue} />
+            </div>
           ))}
         </div>
       ) : null}

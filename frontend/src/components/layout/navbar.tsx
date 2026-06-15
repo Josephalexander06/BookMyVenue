@@ -33,7 +33,6 @@ const CATEGORY_TABS = [
   { label: "Studios", value: "studio" },
   { label: "Outdoor", value: "outdoor" },
   { label: "Event Venues", value: "event_venue" },
-  { label: "Community Centers", value: "community_center" },
 ] as const;
 
 /* ─── Inner component that uses useSearchParams ──────────────── */
@@ -106,7 +105,7 @@ function NavbarInner() {
 
   const dashboardRoute = user ? roleRoutes[user.role as UserRole] : "/";
   const activeType = searchParams.get("type") ?? "";
-  const showCategoryRow = pathname === "/" || pathname === "/venues";
+  const showCategoryRow = false;
 
   /* Handlers */
   function handleSearch(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -145,7 +144,7 @@ function NavbarInner() {
           </Link>
 
           {/* ── Search Bar (hidden on mobile) ── */}
-          {pathname !== "/" && (
+          {pathname !== "/" && !pathname.startsWith("/dashboard") && (
             <div
               className="hidden md:flex items-center justify-center flex-1 max-w-xl mx-4 transition-all duration-300"
               style={{ maxWidth: searchFocused ? "36rem" : "32rem" }}
@@ -303,16 +302,15 @@ function NavbarInner() {
         {/* ━━━ MOBILE SLIDE-DOWN ━━━ */}
         <div
           ref={mobileRef}
-          className={`absolute left-0 right-0 top-full z-40 overflow-hidden transition-all duration-300 md:hidden ${
-            mobileMenuOpen
+          className={`absolute left-0 right-0 top-full z-40 overflow-hidden transition-all duration-300 md:hidden ${mobileMenuOpen
               ? "max-h-[500px] opacity-100"
               : "max-h-0 opacity-0"
-          }`}
+            }`}
           style={{ backgroundColor: "#1A1D2E" }}
         >
           <div className="space-y-4 px-4 pb-5 pt-3">
             {/* Mobile Search */}
-            {pathname !== "/" && (
+            {pathname !== "/" && !pathname.startsWith("/dashboard") && (
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
                 <input
@@ -423,11 +421,10 @@ function NavbarInner() {
                         ? `/venues?type=${tab.value}`
                         : "/venues"
                     }
-                    className={`relative whitespace-nowrap px-3 py-2.5 text-[13px] font-medium transition-colors ${
-                      isActive
+                    className={`relative whitespace-nowrap px-3 py-2.5 text-[13px] font-medium transition-colors ${isActive
                         ? "text-white"
                         : "text-white/50 hover:text-white/80"
-                    }`}
+                      }`}
                   >
                     {tab.label}
                     {/* Active indicator */}

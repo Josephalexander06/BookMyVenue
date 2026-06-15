@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { 
-  MapPin, 
-  Users, 
-  Star, 
-  ArrowLeft, 
-  Wifi, 
-  Tv, 
-  Car, 
-  Wind, 
-  Music, 
-  ShieldAlert, 
-  Briefcase 
+import {
+  MapPin,
+  Users,
+  Star,
+  ArrowLeft,
+  Wifi,
+  Tv,
+  Car,
+  Wind,
+  Music,
+  ShieldAlert,
+  Briefcase,
+  CheckCircle
 } from "lucide-react";
 import { ErrorState } from "@/components/dashboard/error-state";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,17 @@ import { useVenue } from "@/features/venues/hooks";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import VenueMap from "@/components/ui/venue-map";
+
+const venueTypeLabels: Record<string, string> = {
+  meeting_room: "Meeting Room",
+  studio: "Studio",
+  auditorium: "Auditorium",
+  community_center: "Community Center",
+  event_venue: "Event Venue",
+  cafe: "Café",
+  convention_hall: "Convention Hall",
+  outdoor: "Outdoor Space",
+};
 
 // Map amenities to icons
 const amenityIcons: Record<string, any> = {
@@ -79,22 +91,30 @@ export default function VenueDetailPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 space-y-8 animate-fade-in font-sans">
       {/* Back button */}
-      <Link href="/venues" className="inline-flex items-center gap-2 text-sm font-medium text-[#999] hover:text-[#333] mb-6 transition-colors">
+      <Link href="/venues" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-800 mb-2 transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back to explore
       </Link>
 
       {/* Header Info */}
-      <div className="mb-6 space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-[#333] sm:text-4xl">{venue.name}</h1>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
-          <span className="flex items-center gap-1 font-semibold text-[#333]">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="shrink-0 rounded-full bg-blue-50 border border-blue-100 px-3 py-1 text-xs font-semibold text-[#0052ff]">
+            {venueTypeLabels[venue.type] ?? venue.type}
+          </span>
+          <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" /> Verified Space
+          </span>
+        </div>
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl leading-tight">{venue.name}</h1>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-slate-500">
+          <span className="flex items-center gap-1 text-slate-800">
             <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
             {ratingValue}
           </span>
           <span className="underline cursor-pointer">{reviewsCount} reviews</span>
-          <span>•</span>
+          <span className="text-slate-300">•</span>
           <span className="flex items-center gap-1">
             <MapPin className="h-4 w-4 text-slate-400" />
             {venue.location}
@@ -104,14 +124,14 @@ export default function VenueDetailPage() {
 
       {/* Gallery Frame */}
       {venue.images && venue.images.length > 1 ? (
-        <div className="grid grid-cols-4 gap-2 h-[300px] sm:h-[450px] overflow-hidden rounded-3xl border border-slate-100 shadow-soft">
+        <div className="grid grid-cols-4 gap-3 h-[300px] sm:h-[450px] overflow-hidden rounded-[24px] border border-slate-100 shadow-soft">
           {/* Main large image */}
           <div className="col-span-2 row-span-2 relative overflow-hidden bg-slate-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={venue.images[0].image_path}
               alt={venue.name}
-              className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+              className="h-full w-full object-cover hover:scale-[1.02] transition-transform duration-300"
             />
           </div>
           {/* Smaller images */}
@@ -121,18 +141,18 @@ export default function VenueDetailPage() {
               <img
                 src={img.image_path}
                 alt={`${venue.name} photo ${idx + 2}`}
-                className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+                className="h-full w-full object-cover hover:scale-[1.02] transition-transform duration-300"
               />
               {idx === 3 && venue.images!.length > 5 && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">+{venue.images!.length - 5} more</span>
+                <div className="absolute inset-0 bg-black/45 flex items-center justify-center backdrop-blur-[2px]">
+                  <span className="text-white text-sm font-bold">+{venue.images!.length - 5} photos</span>
                 </div>
               )}
             </div>
           ))}
         </div>
       ) : (
-        <div className="relative h-[300px] w-full overflow-hidden rounded-3xl bg-slate-100 sm:h-[450px] shadow-soft border border-slate-100">
+        <div className="relative h-[300px] w-full overflow-hidden rounded-[24px] bg-slate-100 sm:h-[450px] shadow-soft border border-slate-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={venue.imageUrl || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"}
@@ -144,59 +164,63 @@ export default function VenueDetailPage() {
       )}
 
       {/* Detail Layout */}
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1.6fr_1fr]">
-        
+      <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr] items-start">
+
         {/* Left Column: Details */}
         <div className="space-y-8">
-          
+
           {/* Host/Basic Details */}
           <div className="border-b border-slate-100 pb-6 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Hosted by {venue.ownerName ?? "Community Owner"}</h2>
-              <p className="text-sm text-slate-500 mt-1">Capacity: up to {formatNumber(venue.capacity)} guests</p>
+              <p className="text-xs font-semibold text-slate-400 mt-1">Capacity: up to {formatNumber(venue.capacity)} guests seated</p>
             </div>
-            <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            <div className="h-12 w-12 rounded-2xl bg-[#e2e7ff] text-[#0052ff] flex items-center justify-center font-extrabold text-base border border-blue-100 shadow-sm">
               {(venue.ownerName ?? "CO").substring(0, 2).toUpperCase()}
             </div>
           </div>
 
           {/* Description */}
-          <div className="border-b border-slate-100 pb-6">
+          <div className="border-b border-slate-100 pb-6 space-y-3">
             <h3 className="text-lg font-bold text-slate-900">About the space</h3>
-            <p className="mt-3 text-slate-600 leading-relaxed">{venue.description}</p>
+            <p className="text-sm text-slate-500 leading-relaxed whitespace-pre-line">{venue.description}</p>
           </div>
 
-          {/* Features / Icons */}
-          <div className="border-b border-slate-100 pb-6">
+          {/* Features / Specs */}
+          <div className="border-b border-slate-100 pb-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-900">Venue Specifications</h3>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="flex gap-3 rounded-2xl border border-slate-100 p-4 bg-slate-50/50">
-                <Users className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex gap-4 rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-[#0052ff] shrink-0 border border-slate-100">
+                  <Users className="h-5 w-5" />
+                </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-800">Total Capacity</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">Accommodates up to {venue.capacity} guests comfortably.</p>
+                  <h4 className="font-bold text-xs text-slate-900">Total Capacity</h4>
+                  <p className="text-xs text-slate-400 mt-0.5">Accommodates up to {venue.capacity} guests comfortably.</p>
                 </div>
               </div>
-              <div className="flex gap-3 rounded-2xl border border-slate-100 p-4 bg-slate-50/50">
-                <ShieldAlert className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="flex gap-4 rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-emerald-600 shrink-0 border border-slate-100">
+                  <CheckCircle className="h-5 w-5" />
+                </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-800">Instant Booking</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">Submit request instantly to the owner for validation.</p>
+                  <h4 className="font-bold text-xs text-slate-900">Instant Booking</h4>
+                  <p className="text-xs text-slate-400 mt-0.5">Submit request instantly to the owner for validation.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Amenities list */}
-          <div className="border-b border-slate-100 pb-6">
+          <div className="border-b border-slate-100 pb-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-900">What this venue offers</h3>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               {venue.amenities.map((amenity) => {
                 const Icon = amenityIcons[amenity] || Star;
                 return (
                   <div key={amenity} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-3.5 shadow-sm">
-                    <Icon className="h-5 w-5 text-slate-600" />
-                    <span className="text-sm font-medium text-slate-700">{amenity}</span>
+                    <Icon className="h-4 w-4 text-slate-500 shrink-0" />
+                    <span className="text-xs font-bold text-slate-700">{amenity}</span>
                   </div>
                 );
               })}
@@ -216,48 +240,48 @@ export default function VenueDetailPage() {
 
         {/* Right Column: Sticky Booking Widget */}
         <div className="relative">
-          <Card className="sticky top-24 border border-slate-100 shadow-soft overflow-hidden rounded-2xl">
+          <Card className="sticky top-24 border border-slate-100 shadow-soft overflow-hidden rounded-[24px] bg-white">
             <CardContent className="p-6 space-y-6">
-              
+
               <div className="flex items-baseline justify-between border-b border-slate-50 pb-4">
                 <div>
                   {venue.allowedModes === "HOURLY" ? (
                     <>
                       <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricePerHour ?? 0)}</span>
-                      <span className="text-sm font-normal text-slate-500"> / hour</span>
+                      <span className="text-xs font-semibold text-slate-400"> / hour</span>
                     </>
                   ) : venue.allowedModes === "DAILY" ? (
                     <>
                       <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricing)}</span>
-                      <span className="text-sm font-normal text-slate-500"> / day</span>
+                      <span className="text-xs font-semibold text-slate-400"> / day</span>
                     </>
                   ) : (
                     <div className="space-y-1">
                       <div>
                         <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricing)}</span>
-                        <span className="text-sm font-normal text-slate-500"> / day</span>
+                        <span className="text-xs font-semibold text-slate-400"> / day</span>
                       </div>
                       <div>
-                        <span className="text-lg font-bold text-slate-700">{formatCurrency(venue.pricePerHour ?? 0)}</span>
-                        <span className="text-xs font-normal text-slate-500"> / hour</span>
+                        <span className="text-base font-bold text-slate-500">{formatCurrency(venue.pricePerHour ?? 0)}</span>
+                        <span className="text-xs font-semibold text-slate-400"> / hour</span>
                       </div>
                     </div>
                   )}
                 </div>
-                <span className="flex items-center gap-0.5 text-sm font-semibold text-slate-800">
+                <span className="flex items-center gap-1 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded">
                   ★ {ratingValue}
                 </span>
               </div>
 
               <div className="space-y-3">
-                <div className="rounded-xl border border-slate-200 p-3 bg-slate-50/50">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Availability</span>
-                  <span className="block text-sm font-semibold text-slate-800 mt-0.5">{venue.availability ?? "Contact Owner"}</span>
+                <div className="rounded-xl border border-slate-100 p-3 bg-slate-50/50">
+                  <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Availability</span>
+                  <span className="block text-xs font-bold text-slate-800 mt-0.5">{venue.availability ?? "Contact Owner"}</span>
                 </div>
-                
-                <div className="rounded-xl border border-slate-200 p-3 bg-slate-50/50">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cancellation Policy</span>
-                  <span className="block text-xs font-medium text-slate-600 mt-0.5">Flexible cancellation. Full refund within 24 hours.</span>
+
+                <div className="rounded-xl border border-slate-100 p-3 bg-slate-50/50">
+                  <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cancellation Policy</span>
+                  <span className="block text-[11px] font-semibold text-slate-500 mt-0.5">Flexible cancellation. Full refund within 24 hours.</span>
                 </div>
               </div>
 
@@ -271,13 +295,13 @@ export default function VenueDetailPage() {
                     router.push(`/venues/${venue.id}/book`);
                   }
                 }}
-                className="w-full bg-accent hover:bg-accent-hover py-6 rounded-xl font-bold shadow-soft transition-transform duration-100 active:scale-95 text-base"
+                className="w-full bg-[#0052ff] hover:bg-[#004ced] py-6 rounded-xl font-bold shadow-soft transition-transform duration-100 active:scale-95 text-xs text-white"
               >
                 Book This Venue Now
               </Button>
 
               <div className="text-center">
-                <span className="text-xs text-slate-400">You won&apos;t be charged yet</span>
+                <span className="text-[10px] font-bold text-slate-400">You won&apos;t be charged yet</span>
               </div>
 
             </CardContent>

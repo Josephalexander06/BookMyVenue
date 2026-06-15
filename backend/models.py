@@ -21,8 +21,8 @@ class Venue(Base):
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
     owner_id = Column(Integer,ForeignKey("users.id", ondelete="CASCADE"),nullable=False)
     search_vector  = Column(TSVECTOR,nullable=False)
-    location = Column(Geography("POINT",srid=4320))
-
+    location = Column(Geography("POINT",srid=4326))
+    type = Column(String,nullable=False)
 
     owner  = relationship("User",back_populates="venues")
     bookings = relationship("Booking",back_populates="venue")

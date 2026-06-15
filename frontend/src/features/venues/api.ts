@@ -26,10 +26,32 @@ function mapImages(rawImages?: any[]): VenueImage[] {
   }));
 }
 
+function normalizeVenueType(type?: string): any {
+  if (!type) return "meeting_room";
+  const normalized = type.trim().toLowerCase().replace(/\s+/g, "_");
+  const validTypes = [
+    "cafe",
+    "auditorium",
+    "convention_hall",
+    "studio",
+    "meeting_room",
+    "outdoor",
+    "community_center",
+    "event_venue",
+  ];
+  if (validTypes.includes(normalized)) {
+    return normalized;
+  }
+  return "meeting_room";
+}
+
 const toQuery = (filters: (VenueFilters & { ownerOnly?: boolean }) = {}) => {
   const params = new URLSearchParams();
   if (filters.search) {
-    params.set("q", filters.search);
+    params.set("search", filters.search);
+  }
+  if (filters.type && filters.type !== "all") {
+    params.set("type", filters.type);
   }
   return params.toString();
 };
@@ -62,7 +84,7 @@ export async function getVenues(
       location: v.address,
       latitude: v.latitude !== undefined && v.latitude !== null ? Number(v.latitude) : undefined,
       longitude: v.longitude !== undefined && v.longitude !== null ? Number(v.longitude) : undefined,
-      type: v.type ?? "meeting_room",
+      type: normalizeVenueType(v.type),
       amenities: v.amenities ?? ["WiFi", "Parking"],
       pricing: v.price_per_day ?? v.price ?? 500,
       pricePerHour: v.price_per_hour ?? Math.round((v.price_per_day ?? v.price ?? 500) / 8),
@@ -102,7 +124,7 @@ export async function getVenueById(id: string): Promise<Venue> {
         location: found.address,
         latitude: found.latitude !== undefined && found.latitude !== null ? Number(found.latitude) : undefined,
         longitude: found.longitude !== undefined && found.longitude !== null ? Number(found.longitude) : undefined,
-        type: found.type ?? "meeting_room",
+        type: normalizeVenueType(found.type),
         amenities: found.amenities ?? ["WiFi", "Parking"],
         pricing: found.price_per_day ?? found.price ?? 500,
         pricePerHour: found.price_per_hour ?? Math.round((found.price_per_day ?? found.price ?? 500) / 8),
@@ -124,7 +146,7 @@ export async function getVenueById(id: string): Promise<Venue> {
     location: data.address,
     latitude: data.latitude !== undefined && data.latitude !== null ? Number(data.latitude) : undefined,
     longitude: data.longitude !== undefined && data.longitude !== null ? Number(data.longitude) : undefined,
-    type: data.type ?? "meeting_room",
+    type: normalizeVenueType(data.type),
     amenities: data.amenities ?? ["WiFi", "Parking"],
     pricing: data.price_per_day ?? data.price ?? 500,
     pricePerHour: data.price_per_hour ?? Math.round((data.price_per_day ?? data.price ?? 500) / 8),
@@ -142,6 +164,7 @@ export async function createVenue(payload: CreateVenuePayload): Promise<Venue> {
   formData.append("address", payload.location);
   formData.append("capacity", String(payload.capacity));
   formData.append("booking_allowed_mode", payload.allowedModes || "BOTH");
+  formData.append("type", payload.type);
   if (payload.latitude !== undefined && payload.latitude !== null) {
     formData.append("latitude", String(payload.latitude));
   }
@@ -176,7 +199,7 @@ export async function createVenue(payload: CreateVenuePayload): Promise<Venue> {
     location: res.address,
     latitude: res.latitude !== undefined && res.latitude !== null ? Number(res.latitude) : undefined,
     longitude: res.longitude !== undefined && res.longitude !== null ? Number(res.longitude) : undefined,
-    type: res.type ?? "meeting_room",
+    type: normalizeVenueType(res.type),
     amenities: res.amenities ?? ["WiFi", "Parking"],
     pricing: res.price_per_day ?? res.price ?? 500,
     pricePerHour: res.price_per_hour ?? Math.round((res.price_per_day ?? res.price ?? 500) / 8),
@@ -200,6 +223,7 @@ export async function updateVenue(
     booking_allowed_mode: payload.allowedModes,
     latitude: payload.latitude,
     longitude: payload.longitude,
+    type: payload.type,
   };
   const { data } = await apiClient.put<any>(`/venues/${id}`, backendPayload);
   const images = mapImages(data.image);
@@ -211,7 +235,7 @@ export async function updateVenue(
     location: data.address,
     latitude: data.latitude !== undefined && data.latitude !== null ? Number(data.latitude) : undefined,
     longitude: data.longitude !== undefined && data.longitude !== null ? Number(data.longitude) : undefined,
-    type: data.type ?? "meeting_room",
+    type: normalizeVenueType(data.type),
     amenities: data.amenities ?? ["WiFi", "Parking"],
     pricing: data.price_per_day ?? data.price ?? 500,
     pricePerHour: data.price_per_hour ?? Math.round((data.price_per_day ?? data.price ?? 500) / 8),

@@ -1,14 +1,14 @@
 import os
 from uuid_extensions import uuid7
-from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File,BackgroundTasks
+from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
 from utils.db_helper import get_db
-from utils.schema import CreateVenue, GetVenue, getSearch, Nearbycitys
+from utils.schema import CreateVenue, GetVenue
 import models
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from .users import access_required
 import requests
-
+from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_Distance
 from sqlalchemy import func
 from .auth import get_current_user
 
@@ -22,11 +22,12 @@ os.makedirs(UPLOAD_DIR,exist_ok=True)
 
 
 
-@router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[CreateVenue])
-async def create_venue(backgroundtask:BackgroundTasks,Venues:CreateVenue = Depends(CreateVenue.as_form),images:list[UploadFile] = File(default=[]),db:Session=Depends(get_db),
+@router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[GetVenue])
+async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:list[UploadFile] = File(default=[]),db:Session=Depends(get_db),
                        current_user:int = Depends(access_required)):
 
     venue_data = {k: v for k, v in Venues.dict().items() if hasattr(models.Venue, k)}
+    # print(venue_data)
     new_venue = models.Venue(**venue_data)
     new_venue.owner_id = current_user[0]
 
@@ -43,6 +44,8 @@ async def create_venue(backgroundtask:BackgroundTasks,Venues:CreateVenue = Depen
             )
         new_venue.latitude = coords["latitude"]
         new_venue.longitude = coords["longitude"]
+
+    new_venue.location = f"POINT({new_venue.longitude} {new_venue.latitude})" 
 
     db.add(new_venue)
     db.commit()
@@ -75,10 +78,16 @@ def geocode(address:str):
     headers = {
         "User-Agent": "Bookmyvenue/1.0" 
     }
+    
+    query = address
+    if "kerala" not in query.lower():
+        query = f"{query}, Kerala"
+
     params = {
-        "q":address,
+        "q":query,
         "format" : "json",
-        "limit" : 1 
+        "limit" : 1,
+        "countrycodes": "in"
        }
     
     response  = requests.get(url,params=params,headers=headers)
@@ -100,14 +109,28 @@ async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(ge
 
 
 @router.get("/",status_code=status.HTTP_200_OK,response_model=List[GetVenue])
-async def get_venues(q:Optional[str] = Query(None),db:Session=Depends(get_db)):
+async def get_venues(search:Optional[str] = Query(None), type:Optional[str] = Query(None), db:Session=Depends(get_db)):
 
-    if q is not None:        
-        processed_query = " & ".join(f"{word}:*" for word in q.split())
+    query = db.query(models.Venue)
 
-        venues  = db.query(models.Venue).filter(models.Venue.search_vector.match(processed_query,postgresql_regconfig="english")).all()
-    else:
-        venues  = db.query(models.Venue).all()
+    if type is not None:
+        query = query.filter(func.lower(models.Venue.type) == type.lower())
+
+    if search is not None:        
+        # processed_query = " & ".join(f"{word}:*" for word in q.split())
+        # venues  = db.query(models.Venue).filter(models.Venue.search_vector.match(processed_query,postgresql_regconfig="english")).all()
+
+        coord = geocode(search)
+        if "error" in coord:
+            return []
+
+        search_point = func.ST_GeogFromText(
+            f"POINT({coord["longitude"]} {coord["latitude"]})"
+        )
+                
+        query = query.filter(func.ST_DWithin(models.Venue.location,search_point,20000)).order_by(func.ST_Distance(models.Venue.location,search_point))
+
+    venues = query.all()
     return venues
 
 
@@ -136,7 +159,6 @@ async def update_venue(id:int,updated_data:CreateVenue,db:Session=Depends(get_db
 
     venue_data = {k: v for k, v in updated_data.dict().items() if hasattr(models.Venue, k)}
     
-    # Handle coordinates update & preservation
     if venue_data.get('latitude') is not None and venue_data.get('longitude') is not None:
         pass
     else:
@@ -156,6 +178,7 @@ async def update_venue(id:int,updated_data:CreateVenue,db:Session=Depends(get_db
             venue_data['longitude'] = exiting_v.longitude
 
     venue_data['search_vector'] = func.to_tsvector('english', updated_data.name + ' ' + updated_data.address)
+    venue_data['location'] = f"POINT({venue_data['longitude']} {venue_data['latitude']})"
     fetch_venue.update(venue_data,synchronize_session=False)
     db.commit()
     

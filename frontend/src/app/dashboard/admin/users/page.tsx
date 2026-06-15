@@ -39,7 +39,7 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[260px,1fr]">
+    <div className="h-full overflow-y-auto p-6 md:p-8 pb-16 font-sans text-slate-800">
       <DashboardSidebar links={links} />
       <div className="space-y-6">
         <div>

@@ -15,6 +15,7 @@ class Venue(BaseModel):
     booking_allowed_mode : Optional[str] = "BOTH" 
     latitude : Optional[float] = None
     longitude : Optional[float] = None
+    type : str
 
     class Config:
         from_attributes = True
@@ -32,6 +33,7 @@ class CreateVenue(Venue):
         booking_allowed_mode : str = Form(...),
         latitude: Optional[float] = Form(None),
         longitude: Optional[float] = Form(None),
+        type : str = Form(...),
     ):
         return cls(
             name=name,
@@ -42,6 +44,8 @@ class CreateVenue(Venue):
             booking_allowed_mode=booking_allowed_mode,
             latitude=latitude,
             longitude=longitude,
+            type = type,
+
         )
 class VenueImage(BaseModel):
     id : int
@@ -51,6 +55,7 @@ class VenueImage(BaseModel):
         from_attributes = True
 
 class GetVenue(Venue):
+    id: int
     image : list[VenueImage] = []
     class Config:
         from_attributes = True

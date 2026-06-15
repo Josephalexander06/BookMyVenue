@@ -5,9 +5,16 @@ import { useAuthStore } from "@/store/auth-store";
 import { roleRoutes } from "@/lib/config";
 import type { UserRole } from "@/types/auth";
 
+import { usePathname } from "next/navigation";
+
 export function Footer() {
+  const pathname = usePathname();
   const { isAuthenticated, user } = useAuthStore();
   const dashboardRoute = user ? roleRoutes[user.role as UserRole] : "/";
+
+  if (pathname.startsWith("/dashboard")) {
+    return null;
+  }
 
   return (
     <footer className="bg-nav">

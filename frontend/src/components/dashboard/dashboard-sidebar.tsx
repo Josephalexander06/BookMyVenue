@@ -12,21 +12,27 @@ export function DashboardSidebar({ links }: DashboardSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="h-fit rounded-xl border border-slate-100 bg-white p-2">
-      <nav className="space-y-0.5">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={cn(
-              "block rounded-lg px-3 py-2 text-[13px] font-medium text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-700",
-              pathname === link.href && "bg-slate-900 text-white hover:bg-slate-800 hover:text-white",
-            )}
-          >
-            {link.label}
-          </Link>
-        ))}
+    <div className="w-full bg-white border border-slate-100 rounded-2xl p-1.5 shadow-soft mb-8">
+      <nav className="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none">
+        {links.map((link) => {
+          const isActive = pathname === link.href;
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold transition-all border",
+                isActive
+                  ? "bg-[#0052ff] border-[#0052ff] text-white shadow-md shadow-blue-500/10"
+                  : "bg-white text-slate-600 border-transparent hover:border-slate-100 hover:text-slate-900 hover:bg-slate-50/50"
+              )}
+            >
+              {link.label}
+            </Link>
+          );
+        })}
       </nav>
-    </aside>
+    </div>
   );
 }
+
