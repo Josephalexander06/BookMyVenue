@@ -1,7 +1,7 @@
 from fastapi import Security,Depends,HTTPException,status
 from jose import JWTError,jwt
 from fastapi.security import OAuth2PasswordBearer
-from utils.config import settings
+from backend.utils.config import settings
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/verify-otp")

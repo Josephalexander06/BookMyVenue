@@ -1,4 +1,4 @@
-from utils.db_helper import Base
+from backend.utils.db_helper import Base
 from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime, ForeignKey, DECIMAL
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import TSVECTOR

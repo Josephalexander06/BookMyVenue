@@ -1,16 +1,16 @@
 import os
 from uuid_extensions import uuid7
 from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
-from utils.db_helper import get_db
-from utils.schema import CreateVenue, GetVenue
-import models
+from backend.utils.db_helper import get_db
+from backend.utils.schema import CreateVenue, GetVenue
+from backend import models
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from .users import access_required
+from backend.routers.users import access_required
 import requests
 from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_Distance
 from sqlalchemy import func
-from .auth import get_current_user
+from backend.routers.auth import get_current_user
 
 router = APIRouter(
     prefix="/venues",

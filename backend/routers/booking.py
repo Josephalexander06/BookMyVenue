@@ -1,11 +1,11 @@
 from fastapi import Depends,APIRouter,status, HTTPException
-from .auth import get_current_user
-from utils.db_helper import get_db
+from backend.routers.auth import get_current_user
+from backend.utils.db_helper import get_db
 from sqlalchemy.orm import Session
-from utils.schema import Bookings, Booking_Owner
-from models import Booking, Venue, User
+from backend.utils.schema import Bookings, Booking_Owner
+from backend.models import Booking, Venue, User
 from pydantic import field_validator
-from .users import access_required,admin_required
+from backend.routers.users import access_required,admin_required
 from datetime import date,datetime
 from zoneinfo import ZoneInfo
 
@@ -31,7 +31,7 @@ def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int
     
     today = date.today()
     booking_day = book.start_time.date() if isinstance(book.start_time, datetime) else book.start_time
-    if booking_day < today:
+    if booking_day is not None and  booking_day < today:
         raise HTTPException(status_code=404,detail="Cant book older date")
     
     start_t = book.start_time

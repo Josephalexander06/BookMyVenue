@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
-from routers import booking,users,venue
-from utils.db_helper import Base, engine
+from backend.routers import booking,users,venue
+from backend.utils.db_helper import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
