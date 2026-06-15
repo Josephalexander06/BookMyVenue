@@ -95,3 +95,13 @@ class ImageMetaData(Base):
 
     venue = relationship("Venue",back_populates="image")
 
+
+class Transactions(Base):
+    __tablename__ = "transactions"
+
+    id = Column(Integer,primary_key=True,nullable=False)
+    order_id = Column(String,unique=True,nullable=False)
+    payment_id = Column(String,nullable=True)
+    amount = Column(Float)
+    currency = Column(String,default="INR")
+    status = Column(String,default="created")

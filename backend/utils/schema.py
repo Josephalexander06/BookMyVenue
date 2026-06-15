@@ -123,3 +123,14 @@ class Nearbycitys(BaseModel):
     km_within:int = Field(gt=0) 
     class Config:
         from_attributes = True
+
+
+class OrderCreate(BaseModel):
+    amount : float = Field(...)
+    currency : str = Field(default="INR")
+    recepit : str
+
+class PayemntVerification(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str

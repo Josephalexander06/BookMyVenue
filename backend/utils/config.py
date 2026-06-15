@@ -6,7 +6,10 @@ class Settings(BaseSettings):
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    DATABASE_URL: str
+    DATABASE_URL: str   
+    RAZORPAY_SECRET_KEY : str
+    RAZORPAY_API_KEY : str
+
 
     # GOOGLE_CLIENT_ID: str
     # GOOGLE_SECRET_ID: str

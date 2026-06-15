@@ -2,12 +2,16 @@ from fastapi import Depends,APIRouter,status, HTTPException
 from backend.routers.auth import get_current_user
 from backend.utils.db_helper import get_db
 from sqlalchemy.orm import Session
-from backend.utils.schema import Bookings, Booking_Owner
-from backend.models import Booking, Venue, User
+from backend.utils.schema import Bookings, Booking_Owner, OrderCreate, PayemntVerification
+from backend.models import Booking, Venue, User, Transactions
 from pydantic import field_validator
 from backend.routers.users import access_required,admin_required
 from datetime import date,datetime
 from zoneinfo import ZoneInfo
+import razorpay
+import hmac
+import hashlib
+from backend.utils.config import settings
 
 
 
@@ -17,6 +21,8 @@ router = APIRouter(
 )
 
 ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY,settings.RAZORPAY_SECRET_KEY))
 
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=Bookings)
 def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):
@@ -147,3 +153,54 @@ def my_bookings(db:Session = Depends(get_db),current_user : tuple = Depends(get_
 
     return result
 
+
+@router.post("/create-order")
+def create_payment_order(data:OrderCreate,db:Session = Depends(get_db)):
+    amount_in_paise  = int(data.amount * 100)
+
+    order_data = {
+        "amount":amount_in_paise,
+        "currency":data.currency,
+        # "recepit":data.recepit,
+        "payment_capture":1
+    }
+
+    try:
+        razorpay_order =  client.order.create(data=order_data)
+
+        db_transaction = Transactions(
+            order_id = razorpay_order['id'],
+            amount = data.amount,
+            currency = data.currency
+        )
+
+        db.add(db_transaction)
+        db.commit()
+
+        return razorpay_order
+    except Exception as e:
+        raise HTTPException(status_code=404,detail=str(e))
+    
+@router.post("/verify-payment")
+def verify_payment_signature(payload:PayemntVerification,db:Session = Depends(get_db)):
+
+    msg = f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}"
+
+    generate_signature = hmac.new(
+        settings.RAZORPAY_SECRET_KEY.encode('utf-8'),
+        msg.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+
+    if generate_signature == payload.razorpay_signature:
+        transaction = db.query(Transactions).filter(Transactions.order_id == payload.razorpay_order_id).first()
+
+        if transaction:
+            transaction.payment_id = payload.razorpay_payment_id
+            transaction.status = "captured"
+            db.commit()
+            return {"status":"success","messgae":"Payemnt verified"}
+        else:
+            raise HTTPException(status_code=404,detail="Order not found")
+    else:
+        raise HTTPException(status_code=404,detail="Invalid signature")

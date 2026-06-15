@@ -11,6 +11,8 @@ import { ArrowLeft, Clock, Calendar, Info, MapPin, Sparkles, AlertCircle } from 
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth-store";
 import { formatCurrency } from "@/lib/utils";
+import { createPaymentOrder, verifyPayment } from "@/features/bookings/api";
+import { appConfig } from "@/lib/config";
 
 const TIME_OPTIONS = [
   { label: "08:00 AM", value: "08:00" },
@@ -374,6 +376,29 @@ function InlineCalendar({
   );
 }
 
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => {
+      resolve(true);
+    };
+    script.onerror = () => {
+      resolve(false);
+    };
+    document.body.appendChild(script);
+  });
+};
+
 export default function BookingPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -382,6 +407,7 @@ export default function BookingPage() {
   const { data: bookedSlots } = useBookedDates(venue?.id || params.id);
 
   const [bookingMode, setBookingMode] = useState<"DAILY" | "HOURLY">("DAILY");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
   // Default to today's date formatted in local YYYY-MM-DD
   const [date, setDate] = useState(() => {
@@ -622,57 +648,128 @@ export default function BookingPage() {
       }
     }
 
-    try {
-      let requestDate = date;
-      let startIso: string | undefined = undefined;
-      let endIso: string | undefined = undefined;
+    setIsProcessingPayment(true);
 
-      if (bookingMode === "HOURLY") {
-        const startDt = new Date(`${date}T${startTime}:00`);
-        const endDt = new Date(`${date}T${endTime}:00`);
-        requestDate = date;
-        startIso = toLocalISOString(startDt);
-        endIso = toLocalISOString(endDt);
-      } else {
-        const end = checkOutDate || checkInDate;
-        const dailyDt = new Date(`${checkInDate}T00:00:00`);
-        requestDate = checkInDate;
-        startIso = toLocalISOString(dailyDt);
-        const endDt = new Date(`${end}T23:59:59`);
-        endIso = toLocalISOString(endDt);
+    try {
+      // 1. Load Razorpay script dynamically
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error("Failed to load Razorpay SDK. Please check your internet connection.");
       }
 
-      await createBooking.mutateAsync({
-        venueId: venue?.id || params.id,
-        date: requestDate,
-        attendees: 1,
-        note: note || undefined,
-        startTime: startIso,
-        endTime: endIso,
-        mode: bookingMode,
+      // 2. Create Order on Backend
+      const receiptId = `receipt_${venue?.id || params.id}_${Date.now()}`;
+      const order = await createPaymentOrder(billingDetails.total, receiptId);
+
+      if (!order || !order.id) {
+        throw new Error("Failed to initialize payment order on the server.");
+      }
+
+      const currentUser = useAuthStore.getState().user;
+
+      // 3. Setup Razorpay Options
+      const options = {
+        key: appConfig.razorpayKey,
+        amount: order.amount,
+        currency: order.currency,
+        name: "BookMyVenue",
+        description: `Booking for ${venue?.name ?? "Venue"}`,
+        order_id: order.id,
+        handler: async function (response: any) {
+          try {
+            setIsProcessingPayment(true);
+            setErrorMsg("");
+
+            // 4. Verify Payment on Backend
+            const verification = await verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            if (verification.status !== "success") {
+              throw new Error("Payment verification failed. Please contact support.");
+            }
+
+            // 5. Create Booking Request
+            let requestDate = date;
+            let startIso: string | undefined = undefined;
+            let endIso: string | undefined = undefined;
+
+            if (bookingMode === "HOURLY") {
+              const startDt = new Date(`${date}T${startTime}:00`);
+              const endDt = new Date(`${date}T${endTime}:00`);
+              requestDate = date;
+              startIso = toLocalISOString(startDt);
+              endIso = toLocalISOString(endDt);
+            } else {
+              const end = checkOutDate || checkInDate;
+              const dailyDt = new Date(`${checkInDate}T00:00:00`);
+              requestDate = checkInDate;
+              startIso = toLocalISOString(dailyDt);
+              const endDt = new Date(`${end}T23:59:59`);
+              endIso = toLocalISOString(endDt);
+            }
+
+            await createBooking.mutateAsync({
+              venueId: venue?.id || params.id,
+              date: requestDate,
+              attendees: 1,
+              note: note || undefined,
+              startTime: startIso,
+              endTime: endIso,
+              mode: bookingMode,
+            });
+
+            if (currentUser?.role === "admin") {
+              router.push("/dashboard/admin/bookings");
+            } else if (currentUser?.role === "owner") {
+              router.push("/dashboard/owner/bookings");
+            } else {
+              router.push("/dashboard/customer");
+            }
+          } catch (err: any) {
+            console.warn(err);
+            const detail = err?.response?.data?.detail;
+            setErrorMsg(
+              typeof detail === "string"
+                ? detail
+                : err?.message ?? "Payment verified, but booking confirmation failed. Please contact support."
+            );
+          } finally {
+            setIsProcessingPayment(false);
+          }
+        },
+        prefill: {
+          contact: currentUser?.phone || "",
+        },
+        theme: {
+          color: "#F84464",
+        },
+        modal: {
+          ondismiss: function () {
+            setIsProcessingPayment(false);
+            setErrorMsg("Payment process was cancelled by user.");
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", function (response: any) {
+        setErrorMsg(response.error.description || "Payment failed. Please try again.");
+        setIsProcessingPayment(false);
       });
 
-      const user = useAuthStore.getState().user;
-      if (user?.role === "admin") {
-        router.push("/dashboard/admin/bookings");
-      } else if (user?.role === "owner") {
-        router.push("/dashboard/owner/bookings");
-      } else {
-        router.push("/dashboard/customer");
-      }
+      rzp.open();
     } catch (err: any) {
       console.warn(err);
+      setIsProcessingPayment(false);
       const detail = err?.response?.data?.detail;
-      if (typeof detail === "string") {
-        setErrorMsg(detail);
-      } else if (Array.isArray(detail)) {
-        const messages = detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ");
-        setErrorMsg(messages || "Validation error");
-      } else if (detail && typeof detail === "object") {
-        setErrorMsg(detail.msg || JSON.stringify(detail));
-      } else {
-        setErrorMsg(err?.message ?? "Failed to create booking request. Please check slot availability.");
-      }
+      setErrorMsg(
+        typeof detail === "string"
+          ? detail
+          : err?.message ?? "Failed to initiate payment. Please try again."
+      );
     }
   };
 
@@ -1046,10 +1143,14 @@ export default function BookingPage() {
 
             <Button
               type="submit"
-              disabled={createBooking.isPending || (bookingMode === "HOURLY" ? !date : (!checkInDate || !checkOutDate)) || isBookingBlocked}
+              disabled={createBooking.isPending || isProcessingPayment || (bookingMode === "HOURLY" ? !date : (!checkInDate || !checkOutDate)) || isBookingBlocked}
               className="w-full h-12 rounded-2xl bg-[#F84464] hover:bg-[#e03d5a] text-white text-sm font-bold shadow-soft transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              {createBooking.isPending ? "Submitting Request..." : "Confirm & Send Booking Request"}
+              {isProcessingPayment 
+                ? "Processing Payment..." 
+                : createBooking.isPending 
+                ? "Submitting Request..." 
+                : "Pay & Confirm Booking Request"}
             </Button>
           </form>
         </div>

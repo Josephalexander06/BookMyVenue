@@ -26,9 +26,20 @@ import Link from "next/link";
 import { ClientDate } from "@/components/ui/client-date";
 import { useAuthStore } from "@/store/auth-store";
 
+import { AdminSidebar } from "@/components/dashboard/admin-sidebar";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+
+const links = [
+  { href: "/dashboard/admin", label: "Overview" },
+  { href: "/dashboard/admin/users", label: "Users" },
+  { href: "/dashboard/admin/venues", label: "Venues" },
+  { href: "/dashboard/admin/bookings", label: "Bookings" },
+  { href: "/dashboard/admin/reports", label: "Reports" },
+];
+
 function AdminSkeleton() {
   return (
-    <div className="flex h-full bg-[#F8F9FC] font-sans">
+    <div className="flex h-full bg-[#F8F9FC] font-sans w-full">
       {/* Sidebar Skeleton */}
       <div className="hidden md:flex flex-col w-64 border-r border-slate-150 bg-white p-6 space-y-8">
         <Skeleton className="h-6 w-36 rounded-lg" />
@@ -39,7 +50,7 @@ function AdminSkeleton() {
         </div>
       </div>
       {/* Content Skeleton */}
-      <div className="flex-grow p-6 md:p-10 space-y-8">
+      <div className="flex-grow p-6 md:p-10 space-y-8 overflow-y-auto">
         <Skeleton className="h-8 w-48 rounded-xl" />
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -88,82 +99,16 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="flex h-full bg-[#F8F9FC] font-sans">
+    <div className="flex h-full bg-[#F8F9FC] font-sans w-full">
       {/* Left Sidebar Layout */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-slate-150 bg-white p-6 justify-between h-full shrink-0">
-        <div className="space-y-8">
-          <div>
-            <h2 className="text-sm font-bold text-slate-800 tracking-tight">Admin Panel</h2>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Venue Manager</p>
-          </div>
-
-          <nav className="space-y-1">
-            <Link 
-              href="/dashboard/admin" 
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-emerald-450/25 to-teal-400/20 text-emerald-800"
-              style={{ background: "linear-gradient(135deg, rgba(52, 211, 153, 0.15), rgba(45, 212, 191, 0.15))" }}
-            >
-              <LayoutDashboard className="h-4 w-4 text-emerald-600" />
-              Dashboard
-            </Link>
-            <Link 
-              href="/dashboard/admin/bookings" 
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-slate-500 hover:text-slate-850 hover:bg-slate-50"
-            >
-              <Calendar className="h-4 w-4" />
-              Bookings
-            </Link>
-            <Link 
-              href="/dashboard/admin/venues" 
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-slate-500 hover:text-slate-850 hover:bg-slate-50"
-            >
-              <Building2 className="h-4 w-4" />
-              My Venues
-            </Link>
-            <Link 
-              href="/dashboard/admin/reports" 
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-slate-500 hover:text-slate-850 hover:bg-slate-50"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </Link>
-            <Link 
-              href="/dashboard/admin/users" 
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all text-slate-500 hover:text-slate-850 hover:bg-slate-50"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-          </nav>
-        </div>
-
-        <div className="space-y-4 pt-6 border-t border-slate-100">
-          <Link 
-            href="#" 
-            className="flex items-center gap-3 px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
-          >
-            <HelpCircle className="h-4 w-4" />
-            Support
-          </Link>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-650 transition-colors w-full text-left"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </button>
-          <Link 
-            href="/venues"
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-soft transition-all active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            Add New Venue
-          </Link>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content Layout */}
       <div className="flex-grow p-6 md:p-8 space-y-8 overflow-y-auto h-full pb-16">
+        {/* Mobile Navigation */}
+        <div className="md:hidden">
+          <DashboardSidebar links={links} />
+        </div>
         
         {/* Header */}
         <div className="flex justify-between items-center">

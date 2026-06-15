@@ -83,3 +83,22 @@ export async function cancelBooking(id: string) {
   const { data } = await apiClient.patch<any>(`/booking/${id}/cancel`);
   return data;
 }
+
+export async function createPaymentOrder(amount: number, receipt: string) {
+  const { data } = await apiClient.post<any>("/booking/create-order", {
+    amount,
+    currency: "INR",
+    recepit: receipt,
+  });
+  return data;
+}
+
+export async function verifyPayment(payload: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}) {
+  const { data } = await apiClient.post<any>("/booking/verify-payment", payload);
+  return data;
+}
+
