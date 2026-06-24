@@ -1,10 +1,11 @@
-import { Calendar, Users, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calendar, Users, MapPin, Star } from "lucide-react";
 import { ClientDate } from "@/components/ui/client-date";
 import type { Booking } from "@/types/booking";
 import type { Venue } from "@/types/venue";
 import { formatCurrency } from "@/lib/utils";
 
-import { useCancelBooking } from "@/features/bookings/hooks";
+import { useCancelBooking, useRateBooking } from "@/features/bookings/hooks";
 import { useAuthStore } from "@/store/auth-store";
 
 const statusConfig = {
@@ -33,9 +34,27 @@ const statusConfig = {
 export function BookingCard({ booking, venue }: { booking: Booking; venue?: Venue }) {
   const status = statusConfig[booking.status] ?? statusConfig.pending;
   const cancelBooking = useCancelBooking();
+  const rateBooking = useRateBooking();
   const user = useAuthStore((s) => s.user);
-  const isCustomer = user?.role === "customer";
-  const canCancel = isCustomer && booking.status !== "rejected" && booking.status !== "cancelled";
+  const canCancel = booking.status !== "rejected" && booking.status !== "cancelled";
+
+  const [rating, setRating] = useState<number>(booking.rating || 0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+
+  useEffect(() => {
+    if (booking.rating !== undefined && booking.rating !== null) {
+      setRating(booking.rating);
+    }
+  }, [booking.rating]);
+
+  const handleRate = async (val: number) => {
+    setRating(val);
+    try {
+      await rateBooking.mutateAsync({ bookingId: booking.id, rating: val });
+    } catch (err) {
+      console.error("Failed to rate booking:", err);
+    }
+  };
 
   const handleCancel = async () => {
     if (confirm("Are you sure you want to cancel this booking request?")) {
@@ -116,6 +135,38 @@ export function BookingCard({ booking, venue }: { booking: Booking; venue?: Venu
             </p>
           )}
         </div>
+
+        {booking.status === "approved" && (
+          <div className="mt-2.5 pt-2 border-t border-slate-50 flex items-center gap-1.5 animate-fade-in">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Rate:</span>
+            <div className="flex items-center">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  disabled={rateBooking.isPending}
+                  onClick={() => handleRate(star)}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  className="p-0.5 transition-transform duration-100 active:scale-75 disabled:opacity-50"
+                >
+                  <Star
+                    className={`h-4.5 w-4.5 transition-all duration-150 ${
+                      star <= (hoverRating || rating)
+                        ? "fill-amber-400 text-amber-400 scale-105"
+                        : "text-slate-200 hover:text-slate-350"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+            {rating > 0 && (
+              <span className="text-[10px] font-bold text-amber-500 bg-amber-50/50 border border-amber-100/20 px-1.5 py-0.5 rounded ml-1 animate-scale-in">
+                {rating.toFixed(1)} ★
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -33,6 +33,7 @@ export interface Venue {
   availability?: string;
   rating?: number;
   reviewCount?: number;
+  userCount?: number;
 }
 
 export interface VenueFilters {

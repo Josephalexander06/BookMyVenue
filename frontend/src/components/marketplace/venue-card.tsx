@@ -5,13 +5,16 @@ import type { Venue } from "@/types/venue";
 
 export function VenueCard({ venue }: { venue: Venue }) {
   // Stable rating from venue name
-  const ratingValue = (
-    4.2 +
-    parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.6).toFixed(1))
-  ).toFixed(1);
-  const votesCount = Math.floor(
-    120 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 880)
-  );
+  const hasRating = venue.rating !== undefined && venue.rating !== null && venue.rating > 0;
+  const ratingValue = hasRating
+    ? Number(venue.rating).toFixed(1)
+    : (
+        4.2 +
+        parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.6).toFixed(1))
+      ).toFixed(1);
+  const votesCount = venue.userCount !== undefined && venue.userCount !== null
+    ? venue.userCount
+    : Math.floor(120 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 880));
 
   return (
     <Link href={`/venues/${venue.id}`} className="group block w-full">
@@ -72,10 +75,13 @@ export function VenueCard({ venue }: { venue: Venue }) {
 }
 
 export function VenueCardCompact({ venue }: { venue: Venue }) {
-  const ratingValue = (
-    4.2 +
-    parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.6).toFixed(1))
-  ).toFixed(1);
+  const hasRating = venue.rating !== undefined && venue.rating !== null && venue.rating > 0;
+  const ratingValue = hasRating
+    ? Number(venue.rating).toFixed(1)
+    : (
+        4.2 +
+        parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.6).toFixed(1))
+      ).toFixed(1);
 
   return (
     <Link href={`/venues/${venue.id}`} className="group block w-[150px] sm:w-[170px]">

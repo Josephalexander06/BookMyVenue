@@ -2,7 +2,7 @@ import os
 from uuid_extensions import uuid7
 from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
 from backend.utils.db_helper import get_db
-from backend.utils.schema import CreateVenue, GetVenue
+from backend.utils.schema import CreateVenue, GetVenue, Ratings
 from backend import models
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -143,9 +143,15 @@ async def get_venue(id:int,db: Session = Depends(get_db)):
     if not venue:
         raise HTTPException(status_code=404,detail="Venue Not Found")
     
+    avg_rating, user_cut = db.query(func.avg(models.Rating.ratings),func.count(models.Rating.id)).select_from(models.Booking).join(
+        models.Rating,models.Booking.id == models.Rating.booking_id).filter(models.Booking.venue_id == id).first() or (0,0,0)
+    
+
     images = db.query(models.ImageMetaData).filter(models.ImageMetaData.venue_id == venue.id).all()
     venue.images = images
-    
+    venue.rating = avg_rating  
+    venue.user_count = user_cut
+
     return  venue
 
 
@@ -214,5 +220,4 @@ def get_bookeddates(id:int,db:Session = Depends(get_db)):
             "end_time": b.end_time.isoformat() if b.end_time else None,
             "booking_mode": b.booking_mode
         })
-    return result   
-
+    return result       

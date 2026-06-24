@@ -47,6 +47,7 @@ export async function getBookings() {
       createdAt: b.created_at ?? b.booking_date ?? new Date().toISOString(),
       customerName: b.customer_name ?? "Customer",
       mode: b.mode,
+      rating: b.rating !== undefined && b.rating !== null ? Number(b.rating) : undefined,
     };
   }) as Booking[];
 }
@@ -65,6 +66,7 @@ export async function getMyBookings() {
       createdAt: b.created_at ?? b.booking_date ?? new Date().toISOString(),
       customerName: b.customer_name ?? "Customer",
       mode: b.mode,
+      rating: b.rating !== undefined && b.rating !== null ? Number(b.rating) : undefined,
     };
   }) as Booking[];
 }
@@ -101,4 +103,24 @@ export async function verifyPayment(payload: {
   const { data } = await apiClient.post<any>("/booking/verify-payment", payload);
   return data;
 }
+
+export async function rateBooking(bookingId: string, rating: number) {
+  try {
+    const { data } = await apiClient.post<any>("/booking/rating", {
+      id: Number(bookingId),
+      ratings: rating,
+    });
+    return data;
+  } catch (error: any) {
+    if (error.response?.status === 409) {
+      const { data } = await apiClient.patch<any>("/booking/rating", {
+        id: Number(bookingId),
+        ratings: rating,
+      });
+      return data;
+    }
+    throw error;
+  }
+}
+
 

@@ -57,6 +57,8 @@ class VenueImage(BaseModel):
 class GetVenue(Venue):
     id: int
     image : list[VenueImage] = []
+    rating : Optional[float] = None
+    user_count : Optional[int] = None
     class Config:
         from_attributes = True
 
@@ -101,6 +103,7 @@ class Booking_Owner(Bookings):
     address : Optional[str] = None
     venue_id : Optional[int] = None
     name : Optional[str] = None
+    rating : Optional[float] = None
 
 
 class Profile(BaseModel):
@@ -134,3 +137,11 @@ class PayemntVerification(BaseModel):
     razorpay_order_id: str
     razorpay_payment_id: str
     razorpay_signature: str
+
+class Ratings(BaseModel):
+    id : int
+    # user_id : Optional[int] = None
+    # venue_id : Optional[int] = None
+    ratings: float
+    class Config:
+        from_attributes = True

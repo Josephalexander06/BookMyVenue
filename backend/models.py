@@ -42,6 +42,8 @@ class User(Base):
     venues = relationship("Venue",back_populates="owner",cascade="all,delete")
     bookings = relationship("Booking",back_populates="user")
     owner = relationship("Owner",back_populates="user")
+    transaction = relationship("Transactions",back_populates="user")
+    rating = relationship('Rating',back_populates="user")
 
 
 class OTPVerification(Base):
@@ -71,6 +73,7 @@ class Booking(Base):
 
     venue = relationship("Venue",back_populates="bookings")
     user  = relationship("User",back_populates="bookings")
+    ratings = relationship("Rating",back_populates="booking")
 
 class Owner(Base):
     __tablename__ = "owner"
@@ -105,3 +108,22 @@ class Transactions(Base):
     amount = Column(Float)
     currency = Column(String,default="INR")
     status = Column(String,default="created")
+    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
+
+    user  = relationship("User",back_populates="transaction")
+
+class Rating(Base):
+    __tablename__ = "ratings"
+
+    id = Column(Integer,primary_key=True,nullable=False)
+    user_id = Column(Integer,ForeignKey("users.id"),nullable=False)
+    booking_id = Column(Integer,ForeignKey("bookings.id"),unique=True,nullable=False)
+
+    ratings = Column(Float,nullable=False)
+
+    user  = relationship("User",back_populates="rating")
+    booking  = relationship("Booking",back_populates="ratings")
+
+    created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
+
+    

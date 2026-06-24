@@ -92,6 +92,8 @@ export async function getVenues(
       imageUrl: images.length > 0 ? images[0].image_path : (v.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"),
       images,
       availability: v.availability ? "Available" : "Unavailable",
+      rating: v.rating !== undefined && v.rating !== null ? Number(v.rating) : undefined,
+      userCount: v.user_count !== undefined && v.user_count !== null ? Number(v.user_count) : undefined,
     };
   });
 
@@ -154,6 +156,8 @@ export async function getVenueById(id: string): Promise<Venue> {
     imageUrl: images.length > 0 ? images[0].image_path : (data.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"),
     images,
     availability: data.availability ? "Available" : "Unavailable",
+    rating: data.rating !== undefined && data.rating !== null ? Number(data.rating) : undefined,
+    userCount: data.user_count !== undefined && data.user_count !== null ? Number(data.user_count) : undefined,
   };
 }
 

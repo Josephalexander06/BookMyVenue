@@ -8,6 +8,7 @@ import {
   rejectBooking,
   getMyBookings,
   cancelBooking,
+  rateBooking,
 } from "@/features/bookings/api";
 
 export function useBookings() {
@@ -68,6 +69,20 @@ export function useCancelBooking() {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
       queryClient.invalidateQueries({ queryKey: ["booked-dates"] });
+    },
+  });
+}
+
+export function useRateBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, rating }: { bookingId: string; rating: number }) =>
+      rateBooking(bookingId, rating),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["myBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["venues"] });
+      queryClient.invalidateQueries({ queryKey: ["venue"] });
     },
   });
 }

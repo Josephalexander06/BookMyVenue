@@ -82,13 +82,16 @@ export default function VenueDetailPage() {
   }
 
   // Generate stable rating
-  const ratingValue = (
-    4.5 +
-    parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.4).toFixed(1))
-  ).toFixed(1);
-  const reviewsCount = Math.floor(
-    15 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 85)
-  );
+  const hasRating = venue.rating !== undefined && venue.rating !== null && venue.rating > 0;
+  const ratingValue = hasRating
+    ? Number(venue.rating).toFixed(1)
+    : (
+        4.5 +
+        parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.4).toFixed(1))
+      ).toFixed(1);
+  const reviewsCount = venue.userCount !== undefined && venue.userCount !== null
+    ? venue.userCount
+    : Math.floor(15 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 85));
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 space-y-8 animate-fade-in font-sans">

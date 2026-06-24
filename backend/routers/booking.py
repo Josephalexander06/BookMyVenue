@@ -2,8 +2,8 @@ from fastapi import Depends,APIRouter,status, HTTPException
 from backend.routers.auth import get_current_user
 from backend.utils.db_helper import get_db
 from sqlalchemy.orm import Session
-from backend.utils.schema import Bookings, Booking_Owner, OrderCreate, PayemntVerification
-from backend.models import Booking, Venue, User, Transactions
+from backend.utils.schema import Bookings, Booking_Owner, OrderCreate, PayemntVerification, Ratings
+from backend.models import Booking, Venue, User, Transactions, Rating
 from pydantic import field_validator
 from backend.routers.users import access_required,admin_required
 from datetime import date,datetime
@@ -12,6 +12,8 @@ import razorpay
 import hmac
 import hashlib
 from backend.utils.config import settings
+from typing import List, Optional
+
 
 
 
@@ -85,6 +87,7 @@ def recieved_request(db:Session = Depends(get_db),current_user : tuple = Depends
     result = []
 
     for booking, venue, user in bookings:
+        rating_val = db.query(Rating.ratings).filter(Rating.booking_id == booking.id).scalar()
         result.append({
             "id": booking.id,
             "name": venue.name,
@@ -92,7 +95,8 @@ def recieved_request(db:Session = Depends(get_db),current_user : tuple = Depends
             "booking_date": booking.booking_date,
             "status": booking.status,
             "venue_id": venue.id,
-            "customer_name": user.phone_number
+            "customer_name": user.phone_number,
+            "rating": rating_val
         })
     
     return result
@@ -100,27 +104,38 @@ def recieved_request(db:Session = Depends(get_db),current_user : tuple = Depends
 @router.patch("/{id}/approve")
 def booking_approvel(id : int,db:Session=Depends(get_db),current_user : tuple = Depends(access_required)):
 
-    booking_approval = db.query(Booking).filter(Booking.id == id).first()
-    booking_approval.status = "APPROVED"
+    booking_approval = db.query(Venue,Booking).join(Booking,Booking.venue_id == Venue.id).filter(Venue.owner_id == current_user[0]).filter(Booking.id == id).first()
+    if not booking_approval:
+        raise HTTPException(status_code=404,detail="Not Found")
+    v ,b = booking_approval
+    b.status = "APPROVED"
     db.commit()
+    db.refresh(b)
 
-    return {"updated"}
+    return {"Approved"}
 
 
 @router.patch("/{id}/reject")
 def booking_rejection(id : int,db:Session=Depends(get_db),current_user : tuple = Depends(access_required)):
 
-    booking_approval = db.query(Booking).filter(Booking.id == id).first()
-    booking_approval.status = "REJECTED"
-    db.commit()
 
-    return {"updated"}
+    booking_rejection = db.query(Venue,Booking).join(Booking,Booking.venue_id == Venue.id).filter(Venue.owner_id == current_user[0]).filter(Booking.id == id).first()
+    if not booking_rejection:
+        raise HTTPException(status_code=404,detail="Not Found")
+    
+    v, b = booking_rejection
+    b.status = "REJECTED"
+    db.commit()
+    db.refresh(b)
+
+    return {"Rejected"}
 
 
 @router.patch("/{id}/cancel")
 def booking_cancellation(id : int,db:Session=Depends(get_db),current_user : tuple = Depends(get_current_user)):
 
     booking = db.query(Booking).filter(Booking.id == id).first()
+    
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
@@ -137,25 +152,26 @@ def booking_cancellation(id : int,db:Session=Depends(get_db),current_user : tupl
 def my_bookings(db:Session = Depends(get_db),current_user : tuple = Depends(get_current_user)):
 
     bookings = db.query(Booking,Venue).join(Venue,Booking.venue_id == Venue.id).filter(Booking.user_id == current_user[0]).all()
-    
     result = []
 
     for book,venue in bookings:
+        rating_val = db.query(Rating.ratings).filter(Rating.booking_id == book.id).scalar()
         # if book.status == "APPROVED":
-            result.append({
-                "id": book.id,
-                "name":venue.name,
-                "address":venue.address,
-                "booking_date":book.booking_date,
-                "status":book.status,
-                "venue_id": venue.id
-            })
+        result.append({
+            "id": book.id,
+            "name":venue.name,
+            "address":venue.address,
+            "booking_date":book.booking_date,
+            "status":book.status,
+            "venue_id": venue.id,
+            "rating": rating_val
+        })
 
     return result
 
 
 @router.post("/create-order")
-def create_payment_order(data:OrderCreate,db:Session = Depends(get_db)):
+def create_payment_order(data:OrderCreate,db:Session = Depends(get_db),current_user : tuple = Depends(get_current_user)):
     amount_in_paise  = int(data.amount * 100)
 
     order_data = {
@@ -171,7 +187,8 @@ def create_payment_order(data:OrderCreate,db:Session = Depends(get_db)):
         db_transaction = Transactions(
             order_id = razorpay_order['id'],
             amount = data.amount,
-            currency = data.currency
+            currency = data.currency,
+            user_id = current_user[0]
         )
 
         db.add(db_transaction)
@@ -204,3 +221,55 @@ def verify_payment_signature(payload:PayemntVerification,db:Session = Depends(ge
             raise HTTPException(status_code=404,detail="Order not found")
     else:
         raise HTTPException(status_code=404,detail="Invalid signature")
+    
+@router.post("/rating")
+def create_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tuple = Depends(get_current_user)):
+    booking_id = int(rating.id)
+
+    booking = db.query(Booking).filter(
+        Booking.id == booking_id,
+        Booking.user_id == current_user[0]
+    ).first()
+    
+    if not booking :
+        raise HTTPException(status_code=404,detail="No booking found")
+
+
+    rate = db.query(Rating).filter(Rating.booking_id == booking_id).first()
+
+    if rate:
+        raise HTTPException(status_code=409,detail="already rated")
+        
+   
+    rating_record = Rating(
+            user_id=booking.user_id,
+            booking_id=booking.id,
+            ratings=rating.ratings,
+        )
+
+
+    db.add(rating_record)
+    db.commit()
+
+    return {"msg":"rating seted"}
+
+@router.patch("/rating")
+def update_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tuple = Depends(get_current_user)):
+
+    booking_id = int(rating.id)
+
+    booking = db.query(Booking).filter(
+        Booking.id == booking_id,
+        Booking.user_id == current_user[0]
+    ).first()
+    
+    if not booking :
+        raise HTTPException(status_code=404,detail="No booking found")
+
+    rating_update = db.query(Rating).filter(Rating.booking_id == booking.id).first()
+
+    rating_update.ratings = rating.ratings 
+
+    db.commit()
+    return {"updated"}
+    
