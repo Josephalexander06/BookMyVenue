@@ -132,6 +132,7 @@ class OrderCreate(BaseModel):
     amount : float = Field(...)
     currency : str = Field(default="INR")
     recepit : str
+    user_id : Optional[int] = None
 
 class PayemntVerification(BaseModel):
     razorpay_order_id: str

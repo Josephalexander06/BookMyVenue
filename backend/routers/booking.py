@@ -95,7 +95,7 @@ def recieved_request(db:Session = Depends(get_db),current_user : tuple = Depends
             "booking_date": booking.booking_date,
             "status": booking.status,
             "venue_id": venue.id,
-            "customer_name": user.phone_number,
+            "customer_Phoneno": user.phone_number,
             "rating": rating_val
         })
     
@@ -135,7 +135,6 @@ def booking_rejection(id : int,db:Session=Depends(get_db),current_user : tuple =
 def booking_cancellation(id : int,db:Session=Depends(get_db),current_user : tuple = Depends(get_current_user)):
 
     booking = db.query(Booking).filter(Booking.id == id).first()
-    
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
@@ -171,7 +170,7 @@ def my_bookings(db:Session = Depends(get_db),current_user : tuple = Depends(get_
 
 
 @router.post("/create-order")
-def create_payment_order(data:OrderCreate,db:Session = Depends(get_db),current_user : tuple = Depends(get_current_user)):
+def create_payment_order(data:OrderCreate,db:Session = Depends(get_db),current_user : int  = Depends(get_current_user)):
     amount_in_paise  = int(data.amount * 100)
 
     order_data = {

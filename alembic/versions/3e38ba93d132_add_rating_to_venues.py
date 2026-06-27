@@ -40,6 +40,7 @@ def downgrade() -> None:
     op.alter_column('venues', 'type',
                existing_type=sa.VARCHAR(length=20),
                nullable=True)
+
     op.drop_constraint(None, 'venue_images', type_='foreignkey')
     op.drop_constraint(None, 'owner', type_='foreignkey')
     op.create_table('spatial_ref_sys',
