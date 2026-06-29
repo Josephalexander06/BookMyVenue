@@ -2,7 +2,7 @@ import os
 from uuid_extensions import uuid7
 from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
 from backend.utils.db_helper import get_db
-from backend.utils.schema import CreateVenue, GetVenue, Ratings
+from backend.utils.schema import CreateVenue, GetVenue, Ratings, GetMyVenue
 from backend import models
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -11,6 +11,7 @@ import requests
 from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_Distance
 from sqlalchemy import func
 from backend.routers.auth import get_current_user
+from .users import admin_required
 
 router = APIRouter(
     prefix="/venues",
@@ -19,8 +20,6 @@ router = APIRouter(
 
 UPLOAD_DIR  = "upload"
 os.makedirs(UPLOAD_DIR,exist_ok=True)
-
-
 
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[GetVenue])
 async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:list[UploadFile] = File(default=[]),db:Session=Depends(get_db),
@@ -44,6 +43,7 @@ async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:
             )
         new_venue.latitude = coords["latitude"]
         new_venue.longitude = coords["longitude"]
+
 
     new_venue.location = f"POINT({new_venue.longitude} {new_venue.latitude})" 
 
@@ -101,7 +101,7 @@ def geocode(address:str):
     return {"latitude":float(data[0]["lat"]),"longitude":float(data[0]["lon"])}
 
 
-@router.get("/Venue",status_code=status.HTTP_200_OK,response_model=List[GetVenue])
+@router.get("/Venue",status_code=status.HTTP_200_OK,response_model=List[GetMyVenue])
 async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(get_current_user)):
     id = current_user[0]
     venues  = db.query(models.Venue).filter(models.Venue.owner_id == id).all()
@@ -111,6 +111,7 @@ async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(ge
 @router.get("/",status_code=status.HTTP_200_OK,response_model=List[GetVenue])
 async def get_venues(search:Optional[str] = Query(None), type:Optional[str] = Query(None), db:Session=Depends(get_db)):
 
+    result = []
     query = db.query(models.Venue)
 
     if type is not None:
@@ -129,9 +130,14 @@ async def get_venues(search:Optional[str] = Query(None), type:Optional[str] = Qu
         )
                 
         query = query.filter(func.ST_DWithin(models.Venue.location,search_point,20000)).order_by(func.ST_Distance(models.Venue.location,search_point))
+    
 
     venues = query.all()
-    return venues
+    for n in venues:
+        if n.status == "APPROVED":
+            result.append(n)
+            
+    return result
 
 
 
@@ -147,11 +153,12 @@ async def get_venue(id:int,db: Session = Depends(get_db)):
         models.Rating,models.Booking.id == models.Rating.booking_id).filter(models.Booking.venue_id == id).first() or (0,0,0)
     
 
-    images = db.query(models.ImageMetaData).filter(models.ImageMetaData.venue_id == venue.id).all()
-    venue.images = images
+    image = db.query(models.ImageMetaData).filter(models.ImageMetaData.venue_id == venue.id).all()
+
+    venue.images = image
     venue.rating = avg_rating  
     venue.user_count = user_cut
-
+    
     return  venue
 
 
@@ -221,3 +228,31 @@ def get_bookeddates(id:int,db:Session = Depends(get_db)):
             "booking_mode": b.booking_mode
         })
     return result       
+
+@router.patch("/{id}/Approve")
+def approve_venue(id:int,db:Session = Depends(get_db)):
+
+    venue = db.query(models.Venue).filter(models.Venue.id == id).first()
+    if not venue:
+        raise HTTPException(status_code=404,detail="Venue not found")
+    venue.status = "APPROVED"
+
+    db.commit()
+
+    db.refresh(venue)
+    
+    return {"approved"}
+
+@router.patch("/{id}/reject")
+def reject_venue(id:int,db:Session = Depends(get_db)):
+
+    venue = db.query(models.Venue).filter(models.Venue.id == id).first()
+    if not venue:
+        raise HTTPException(status_code=404,detail="Venue not found")
+    venue.status = "REJECTED"
+
+    db.commit()
+
+    db.refresh(venue)
+    
+    return {"rejected"}

@@ -10,7 +10,8 @@ import {
   Settings, 
   HelpCircle, 
   LogOut, 
-  Plus 
+  Plus, 
+  Users
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -50,8 +51,8 @@ export function AdminSidebar() {
     },
     {
       href: "/dashboard/admin/users",
-      label: "Settings",
-      icon: Settings,
+      label: "Users",
+      icon: Users,
       active: pathname === "/dashboard/admin/users"
     }
   ];

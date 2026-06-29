@@ -30,13 +30,12 @@ app.add_middleware(
 
 #     return response
 
-
 app.include_router(booking.router)
 app.include_router(users.router)
 app.include_router(venue.router)
 # app.include_router(google_auth.router)
 
-app.mount("/uploads",StaticFiles(directory="upload"),name="uploads")
+app.mount("/upload",StaticFiles(directory="/home/joseph/Project/BookMyVenue/backend/upload"),name="upload")
 
 
 @app.get("/")

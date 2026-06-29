@@ -62,6 +62,14 @@ class GetVenue(Venue):
     class Config:
         from_attributes = True
 
+class GetMyVenue(Venue):
+    id: int
+    image : list[VenueImage] = []
+    rating : Optional[float] = None
+    user_count : Optional[int] = None
+    status : str
+    class Config:
+        from_attributes = True
 
 class User(BaseModel):
     phone_no : str

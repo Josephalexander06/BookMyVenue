@@ -9,12 +9,14 @@ export function VenueCard({ venue }: { venue: Venue }) {
   const ratingValue = hasRating
     ? Number(venue.rating).toFixed(1)
     : (
-        4.2 +
-        parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.6).toFixed(1))
+        4.5 +
+        parseFloat((Math.sin(venue.name.charCodeAt(0)) * 0.4).toFixed(1))
       ).toFixed(1);
-  const votesCount = venue.userCount !== undefined && venue.userCount !== null
+  const reviewsCount = venue.userCount !== undefined && venue.userCount !== null
     ? venue.userCount
-    : Math.floor(120 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 880));
+    : Math.floor(15 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 85));
+    
+const votesCount = venue.userCount ?? 0;
 
   return (
     <Link href={`/venues/${venue.id}`} className="group block w-full">

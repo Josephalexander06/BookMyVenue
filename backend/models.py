@@ -23,6 +23,7 @@ class Venue(Base):
     search_vector  = Column(TSVECTOR,nullable=False)
     location = Column(Geography("POINT",srid=4326))
     type = Column(String,nullable=False)
+    status = Column(String,default="PENDING")
 
     owner  = relationship("User",back_populates="venues")
     bookings = relationship("Booking",back_populates="venue")

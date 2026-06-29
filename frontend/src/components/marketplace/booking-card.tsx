@@ -62,6 +62,14 @@ export function BookingCard({ booking, venue }: { booking: Booking; venue?: Venu
     }
   };
 
+  const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const bookingDate = new Date(booking.date);
+bookingDate.setHours(0, 0, 0, 0);
+
+const isPastDate = bookingDate < today;
+
   return (
     <div className="group rounded-xl border border-slate-100 bg-white p-4 transition-all duration-200 hover:border-slate-200 hover:shadow-soft flex gap-4">
       {/* Thumbnail image */}
@@ -114,10 +122,14 @@ export function BookingCard({ booking, venue }: { booking: Booking; venue?: Venu
               <button
                 type="button"
                 onClick={handleCancel}
-                disabled={cancelBooking.isPending}
-                className="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 px-1.5 py-0.5 rounded border border-red-100/50 hover:bg-red-100/50 transition-colors disabled:opacity-50"
+                disabled={cancelBooking.isPending || isPastDate}
+                className="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 px-1.5 py-0.5 rounded border border-red-100/50 hover:bg-red-100/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {cancelBooking.isPending ? "Cancelling..." : "Cancel"}
+                {cancelBooking.isPending
+                  ? "Cancelling..."
+                  : isPastDate
+                  ? "Expired"
+                  : "Cancel"}
               </button>
             )}
           </div>

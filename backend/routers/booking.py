@@ -221,7 +221,7 @@ def verify_payment_signature(payload:PayemntVerification,db:Session = Depends(ge
     else:
         raise HTTPException(status_code=404,detail="Invalid signature")
     
-@router.post("/rating")
+@router.put("/rating")
 def create_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tuple = Depends(get_current_user)):
     booking_id = int(rating.id)
 
@@ -237,38 +237,37 @@ def create_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tupl
     rate = db.query(Rating).filter(Rating.booking_id == booking_id).first()
 
     if rate:
-        raise HTTPException(status_code=409,detail="already rated")
-        
-   
-    rating_record = Rating(
-            user_id=booking.user_id,
-            booking_id=booking.id,
-            ratings=rating.ratings,
-        )
+        rate.ratings = rating.ratings 
+    else:        
+        rating_record = Rating(
+                user_id=booking.user_id,
+                booking_id=booking.id,
+                ratings=rating.ratings,
+            )
 
-
-    db.add(rating_record)
-    db.commit()
-
-    return {"msg":"rating seted"}
-
-@router.patch("/rating")
-def update_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tuple = Depends(get_current_user)):
-
-    booking_id = int(rating.id)
-
-    booking = db.query(Booking).filter(
-        Booking.id == booking_id,
-        Booking.user_id == current_user[0]
-    ).first()
+        db.add(rating_record)
     
-    if not booking :
-        raise HTTPException(status_code=404,detail="No booking found")
-
-    rating_update = db.query(Rating).filter(Rating.booking_id == booking.id).first()
-
-    rating_update.ratings = rating.ratings 
-
     db.commit()
-    return {"updated"}
+
+    return {"msg":"rating set"}
+
+# @router.patch("/rating")
+# def update_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tuple = Depends(get_current_user)):
+
+#     booking_id = int(rating.id)
+
+#     booking = db.query(Booking).filter(
+#         Booking.id == booking_id,
+#         Booking.user_id == current_user[0]
+#     ).first()
+    
+#     if not booking :
+#         raise HTTPException(status_code=404,detail="No booking found")
+
+#     rating_update = db.query(Rating).filter(Rating.booking_id == booking.id).first()
+
+#     rating_update.ratings = rating.ratings 
+
+#     db.commit()
+#     return {"updated"}
     

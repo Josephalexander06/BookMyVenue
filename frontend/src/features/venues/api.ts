@@ -14,7 +14,7 @@ const BACKEND_URL = appConfig.apiBaseUrl;
 function buildImageUrl(imagePath: string): string {
   // Backend serves uploads at /uploads/<filename>
   const filename = imagePath.replace(/^upload\//, "");
-  return `${BACKEND_URL}/uploads/${filename}`;
+  return `${BACKEND_URL}/upload/${filename}`;
 }
 
 /** Map raw backend image array to VenueImage[] with full URLs */

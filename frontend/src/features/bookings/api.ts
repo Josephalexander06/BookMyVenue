@@ -105,22 +105,12 @@ export async function verifyPayment(payload: {
 }
 
 export async function rateBooking(bookingId: string, rating: number) {
-  try {
-    const { data } = await apiClient.post<any>("/booking/rating", {
-      id: Number(bookingId),
-      ratings: rating,
-    });
+    const { data } = await apiClient.put("/booking/rating", {
+    id: bookingId,
+    ratings: rating,
+  });
     return data;
-  } catch (error: any) {
-    if (error.response?.status === 409) {
-      const { data } = await apiClient.patch<any>("/booking/rating", {
-        id: Number(bookingId),
-        ratings: rating,
-      });
-      return data;
-    }
-    throw error;
-  }
 }
+
 
 
