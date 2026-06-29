@@ -34,6 +34,7 @@ export interface Venue {
   rating?: number;
   reviewCount?: number;
   userCount?: number;
+  status?: "PENDING" | "APPROVED" | "REJECTED" | "BLOCKED" | string;
 }
 
 export interface VenueFilters {

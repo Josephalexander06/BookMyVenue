@@ -8,6 +8,10 @@ import {
   getVenues,
   updateVenue,
   getBookedDates,
+  getAdminVenues,
+  approveVenue,
+  rejectVenue,
+  blockVenue,
 } from "@/features/venues/api";
 import type { CreateVenuePayload, VenueFilters } from "@/types/venue";
 
@@ -60,5 +64,45 @@ export function useBookedDates(id: string) {
     queryKey: ["booked-dates", id],
     queryFn: () => getBookedDates(id),
     enabled: Boolean(id) && isNumeric,
+  });
+}
+
+export function useAdminVenues() {
+  return useQuery({
+    queryKey: ["admin-venues"],
+    queryFn: () => getAdminVenues(),
+  });
+}
+
+export function useApproveVenue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => approveVenue(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-venues"] });
+      queryClient.invalidateQueries({ queryKey: ["venues"] });
+    },
+  });
+}
+
+export function useRejectVenue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => rejectVenue(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-venues"] });
+      queryClient.invalidateQueries({ queryKey: ["venues"] });
+    },
+  });
+}
+
+export function useBlockVenue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => blockVenue(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-venues"] });
+      queryClient.invalidateQueries({ queryKey: ["venues"] });
+    },
   });
 }

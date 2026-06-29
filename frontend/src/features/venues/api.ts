@@ -266,3 +266,50 @@ export async function getBookedDates(id: string): Promise<BookedSlot[]> {
   const { data } = await apiClient.get<BookedSlot[]>(`/venues/${id}/booked-dates`);
   return data;
 }
+
+export async function getAdminVenues(): Promise<VenueListResponse> {
+  const { data } = await apiClient.get<any[]>("/venues/admin/list");
+  const items = data.map((v: any, index: number) => {
+    const id = v.id !== undefined && v.id !== null ? String(v.id) : `venue-${encodeURIComponent(v.name || "")}-${index}`;
+    const images = mapImages(v.image);
+    return {
+      id,
+      name: v.name,
+      description: v.description ?? `A premium space for events and meetings: ${v.name}`,
+      capacity: v.capacity ?? 50,
+      location: v.address,
+      latitude: v.latitude !== undefined && v.latitude !== null ? Number(v.latitude) : undefined,
+      longitude: v.longitude !== undefined && v.longitude !== null ? Number(v.longitude) : undefined,
+      type: normalizeVenueType(v.type),
+      amenities: v.amenities ?? ["WiFi", "Parking"],
+      pricing: v.price_per_day ?? v.price ?? 500,
+      pricePerHour: v.price_per_hour ?? Math.round((v.price_per_day ?? v.price ?? 500) / 8),
+      allowedModes: v.booking_allowed_mode ?? v.allowed_modes ?? "BOTH",
+      imageUrl: images.length > 0 ? images[0].image_path : (v.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"),
+      images,
+      availability: v.availability ? "Available" : "Unavailable",
+      rating: v.rating !== undefined && v.rating !== null ? Number(v.rating) : undefined,
+      userCount: v.user_count !== undefined && v.user_count !== null ? Number(v.user_count) : undefined,
+      status: v.status,
+    };
+  });
+
+  return {
+    items,
+    total: items.length,
+    page: 1,
+    pageSize: items.length,
+  };
+}
+
+export async function approveVenue(id: string): Promise<void> {
+  await apiClient.patch(`/venues/${id}/Approve`);
+}
+
+export async function rejectVenue(id: string): Promise<void> {
+  await apiClient.patch(`/venues/${id}/reject`);
+}
+
+export async function blockVenue(id: string): Promise<void> {
+  await apiClient.patch(`/venues/${id}/block`);
+}

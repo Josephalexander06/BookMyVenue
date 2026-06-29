@@ -136,8 +136,15 @@ async def get_venues(search:Optional[str] = Query(None), type:Optional[str] = Qu
     for n in venues:
         if n.status == "APPROVED":
             result.append(n)
-            
+
     return result
+
+
+
+@router.get("/admin/list",status_code=status.HTTP_200_OK,response_model=List[GetMyVenue])
+def get_admin_venues(db:Session = Depends(get_db),current_user:int = Depends(admin_required)):
+    venues = db.query(models.Venue).all()
+    return venues
 
 
 
@@ -230,7 +237,7 @@ def get_bookeddates(id:int,db:Session = Depends(get_db)):
     return result       
 
 @router.patch("/{id}/Approve")
-def approve_venue(id:int,db:Session = Depends(get_db)):
+def approve_venue(id:int,db:Session = Depends(get_db),current_user:int = Depends(admin_required)):
 
     venue = db.query(models.Venue).filter(models.Venue.id == id).first()
     if not venue:
@@ -244,7 +251,7 @@ def approve_venue(id:int,db:Session = Depends(get_db)):
     return {"approved"}
 
 @router.patch("/{id}/reject")
-def reject_venue(id:int,db:Session = Depends(get_db)):
+def reject_venue(id:int,db:Session = Depends(get_db),current_user:int = Depends(admin_required)):
 
     venue = db.query(models.Venue).filter(models.Venue.id == id).first()
     if not venue:
@@ -256,3 +263,17 @@ def reject_venue(id:int,db:Session = Depends(get_db)):
     db.refresh(venue)
     
     return {"rejected"}
+
+@router.patch("/{id}/block")
+def block_venue(id:int,db:Session = Depends(get_db),current_user:int = Depends(admin_required)):
+
+    venue = db.query(models.Venue).filter(models.Venue.id == id).first()
+    if not venue:
+        raise HTTPException(status_code=404,detail="Venue not found")
+    venue.status = "BLOCKED"
+
+    db.commit()
+
+    db.refresh(venue)
+    
+    return {"BLOCKED"}
