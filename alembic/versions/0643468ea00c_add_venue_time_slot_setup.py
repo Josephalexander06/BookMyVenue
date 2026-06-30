@@ -1,8 +1,8 @@
-"""add rating to venues
+"""add venue time slot setup
 
-Revision ID: 3e38ba93d132
-Revises: 84c05b2e7549
-Create Date: 2026-06-24 08:38:13.781928
+Revision ID: 0643468ea00c
+Revises: e26a54441c7e
+Create Date: 2026-06-30 11:01:02.480709
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '3e38ba93d132'
-down_revision: Union[str, Sequence[str], None] = '84c05b2e7549'
+revision: str = '0643468ea00c'
+down_revision: Union[str, Sequence[str], None] = 'e26a54441c7e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -39,7 +39,6 @@ def downgrade() -> None:
     op.alter_column('venues', 'type',
                existing_type=sa.VARCHAR(length=20),
                nullable=True)
-
     op.drop_constraint(None, 'venue_images', type_='foreignkey')
     op.drop_constraint(None, 'owner', type_='foreignkey')
     # ### end Alembic commands ###

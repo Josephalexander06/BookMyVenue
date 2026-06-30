@@ -12,6 +12,8 @@ export interface Booking {
   createdAt: string;
   mode?: "DAILY" | "HOURLY" | "BOTH";
   rating?: number;
+  customer_Phoneno?: string;
+  owner_Phoneno?: string;
 }
 
 export interface CreateBookingPayload {

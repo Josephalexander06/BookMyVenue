@@ -28,6 +28,8 @@ class Venue(Base):
     owner  = relationship("User",back_populates="venues")
     bookings = relationship("Booking",back_populates="venue")
     image = relationship("ImageMetaData",back_populates="venue")
+    time  = relationship("TimeSlot",back_populates="venue")
+
  
 
 class User(Base):
@@ -127,4 +129,15 @@ class Rating(Base):
 
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
 
-    
+class TimeSlot(Base):
+    __tablename__ = "time_slots"
+
+    id = Column(Integer,primary_key=True,nullable=False)
+    venue_id = Column(Integer,ForeignKey("venues.id"),nullable=False)
+    day_of_week = Column(String)
+    opens = Column(Integer,default='9')
+    closes = Column(Integer,default='10')
+
+    venue = relationship("Venue",back_populates="time")
+
+    created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 

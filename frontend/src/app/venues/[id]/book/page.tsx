@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateBooking } from "@/features/bookings/hooks";
-import { useVenue, useBookedDates } from "@/features/venues/hooks";
+import { useVenue, useBookedDates, useVenueTimeslots } from "@/features/venues/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Clock, Calendar, Info, MapPin, Sparkles, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -129,6 +129,7 @@ interface CalendarProps {
   checkOutDate?: string;
   onChangeRange?: (checkIn: string, checkOut: string | null) => void;
   bookedDates: string[];
+  timeslots?: { day_of_week: string; opens: number; closes: number }[];
 }
 
 // Custom Premium Inline Calendar
@@ -140,6 +141,7 @@ function InlineCalendar({
   checkOutDate,
   onChangeRange,
   bookedDates,
+  timeslots,
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(() => {
     const defaultDate = mode === "DAILY" ? checkInDate : selectedDate;
@@ -226,11 +228,34 @@ function InlineCalendar({
 
     if (isBooked || isPast || isFutureLimit) return true;
 
+    // Check if the venue is closed on this day of week
+    if (timeslots && timeslots.length > 0) {
+      const cellDate = new Date(dateStr + "T12:00:00");
+      const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const cellDayName = weekdayNames[cellDate.getDay()];
+      
+      const isDayOperating = timeslots.some(
+        (s) => s.day_of_week.toLowerCase() === cellDayName.toLowerCase()
+      );
+      if (!isDayOperating) return true;
+    }
+
     if (mode === "DAILY" && checkInDate && !checkOutDate) {
       if (dateStr > checkInDate) {
         const range = getDatesInRange(checkInDate + "T00:00:00", dateStr + "T23:59:59");
         const hasBooked = range.some((d) => bookedDates.includes(d));
         if (hasBooked) return true;
+
+        // Check if any date in the selection range is closed
+        if (timeslots && timeslots.length > 0) {
+          const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+          const hasClosedDay = range.some((dStr) => {
+            const dObj = new Date(dStr + "T12:00:00");
+            const dName = weekdayNames[dObj.getDay()];
+            return !timeslots.some((s) => s.day_of_week.toLowerCase() === dName.toLowerCase());
+          });
+          if (hasClosedDay) return true;
+        }
       }
     }
 
@@ -405,6 +430,7 @@ export default function BookingPage() {
   const createBooking = useCreateBooking();
   const { data: venue, isLoading: venueLoading } = useVenue(params.id);
   const { data: bookedSlots } = useBookedDates(venue?.id || params.id);
+  const { data: timeslots } = useVenueTimeslots(venue?.id || params.id);
 
   const [bookingMode, setBookingMode] = useState<"DAILY" | "HOURLY">("DAILY");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -575,7 +601,7 @@ export default function BookingPage() {
 
   const isBookingBlocked = useMemo(() => {
     if (bookingMode === "DAILY") {
-      if (!checkInDate || !checkOutDate) return true;
+      if (!checkInDate || !checkOutDate) return false;
       const range = getDatesInRange(checkInDate + "T00:00:00", checkOutDate + "T23:59:59");
       return range.some((d) => bookedDatesList.includes(d));
     } else {
@@ -909,6 +935,7 @@ export default function BookingPage() {
                         checkOutDate={checkOutDate || undefined}
                         onChangeRange={handleRangeChange}
                         bookedDates={bookedDatesList}
+                        timeslots={timeslots}
                       />
                     </div>
                   )}
@@ -959,6 +986,7 @@ export default function BookingPage() {
                           setShowCalendar(false);
                         }}
                         bookedDates={bookedDatesList}
+                        timeslots={timeslots}
                       />
                     </div>
                   )}

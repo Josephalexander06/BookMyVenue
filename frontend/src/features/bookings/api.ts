@@ -48,6 +48,8 @@ export async function getBookings() {
       customerName: b.customer_name ?? "Customer",
       mode: b.mode,
       rating: b.rating !== undefined && b.rating !== null ? Number(b.rating) : undefined,
+      customer_Phoneno: b.customer_Phoneno,
+      owner_Phoneno: b.owner_Phoneno,
     };
   }) as Booking[];
 }
@@ -67,6 +69,7 @@ export async function getMyBookings() {
       customerName: b.customer_name ?? "Customer",
       mode: b.mode,
       rating: b.rating !== undefined && b.rating !== null ? Number(b.rating) : undefined,
+      owner_Phoneno: b.owner_Phoneno,
     };
   }) as Booking[];
 }

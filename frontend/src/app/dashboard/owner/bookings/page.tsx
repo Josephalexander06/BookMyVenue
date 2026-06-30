@@ -180,6 +180,9 @@ export default function OwnerBookingsPage() {
                           {booking.customerName && (
                             <p>Requested by: <span className="text-slate-600 font-semibold">{booking.customerName}</span></p>
                           )}
+                          {booking.customer_Phoneno && (
+                            <p>Customer Phone: <span className="text-slate-600 font-semibold">{booking.customer_Phoneno}</span></p>
+                          )}
                           {booking.attendees && (
                             <p>{booking.attendees} guests expected</p>
                           )}

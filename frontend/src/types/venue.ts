@@ -35,6 +35,7 @@ export interface Venue {
   reviewCount?: number;
   userCount?: number;
   status?: "PENDING" | "APPROVED" | "REJECTED" | "BLOCKED" | string;
+  timeslots_setup_completed?: boolean;
 }
 
 export interface VenueFilters {

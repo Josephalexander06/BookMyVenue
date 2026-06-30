@@ -18,7 +18,7 @@ import {
 import { CreateVenuePayload, Venue } from "@/types/venue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { MapPin, Plus, Trash2, Users, Pencil, IndianRupee, ImagePlus, X } from "lucide-react";
+import { MapPin, Plus, Trash2, Users, Pencil, IndianRupee, ImagePlus, X, Clock, AlertCircle } from "lucide-react";
 import MapPicker from "@/components/ui/map-picker";
 
 const links = [
@@ -390,12 +390,50 @@ export default function OwnerVenuesPage() {
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base font-semibold text-slate-900 leading-snug">
-                      {venue.name}
-                    </CardTitle>
-                    <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
-                      {venueTypeLabels[venue.type] ?? venue.type}
-                    </span>
+                    <div className="space-y-1">
+                      <CardTitle className="text-base font-semibold text-slate-900 leading-snug">
+                        {venue.name}
+                      </CardTitle>
+                      <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                        {venueTypeLabels[venue.type] ?? venue.type}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 justify-end items-center max-w-[120px]">
+                      {/* Approval Status */}
+                      {venue.status === "APPROVED" && (
+                        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-600 border border-emerald-100">
+                          Approved
+                        </span>
+                      )}
+                      {venue.status === "PENDING" && (
+                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-600 border border-amber-100 animate-pulse">
+                          Pending Approval
+                        </span>
+                      )}
+                      {venue.status === "REJECTED" && (
+                        <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-bold text-rose-600 border border-rose-100">
+                          Rejected
+                        </span>
+                      )}
+                      {venue.status === "BLOCKED" && (
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500 border border-slate-200">
+                          Blocked
+                        </span>
+                      )}
+
+                      {/* Setup completion */}
+                      {venue.timeslots_setup_completed ? (
+                        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-600 border border-emerald-100 flex items-center gap-0.5">
+                          <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-bold text-rose-600 border border-rose-100 flex items-center gap-0.5 animate-pulse">
+                          <span className="h-1 w-1 rounded-full bg-rose-500" />
+                          Incomplete
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
 
@@ -422,18 +460,42 @@ export default function OwnerVenuesPage() {
                     )}
                   </div>
 
+                  {/* Alert banner if timeslots are incomplete */}
+                  {!venue.timeslots_setup_completed && (
+                    <div className="rounded-xl bg-amber-50/50 border border-amber-100 p-3 text-[11px] text-amber-800 space-y-1.5">
+                      <div className="font-bold flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        Operating Hours Required
+                      </div>
+                      <p className="text-slate-500">Please set up the weekly timeslots to make your venue active and bookable.</p>
+                      <button
+                        onClick={() => router.push(`/dashboard/owner/venues/${venue.id}/timeslot`)}
+                        className="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] transition-colors active:scale-[0.98]"
+                      >
+                        Set Operating Hours
+                      </button>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex gap-2 border-t border-slate-50 pt-3">
                     <button
                       onClick={() => openEdit(venue)}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                     >
                       <Pencil className="h-3 w-3" />
                       Edit
                     </button>
                     <button
+                      onClick={() => router.push(`/dashboard/owner/venues/${venue.id}/timeslot`)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                    >
+                      <Clock className="h-3 w-3" />
+                      Timeslots
+                    </button>
+                    <button
                       onClick={() => deleteVenue.mutate(venue.id)}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
                     >
                       <Trash2 className="h-3 w-3" />
                       Delete

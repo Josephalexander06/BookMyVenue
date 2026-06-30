@@ -59,6 +59,7 @@ class GetVenue(Venue):
     image : list[VenueImage] = []
     rating : Optional[float] = None
     user_count : Optional[int] = None
+    timeslots_setup_completed: Optional[bool] = False
     class Config:
         from_attributes = True
 
@@ -68,6 +69,7 @@ class GetMyVenue(Venue):
     rating : Optional[float] = None
     user_count : Optional[int] = None
     status : str
+    timeslots_setup_completed : bool = False
     class Config:
         from_attributes = True
 
@@ -112,6 +114,7 @@ class Booking_Owner(Bookings):
     venue_id : Optional[int] = None
     name : Optional[str] = None
     rating : Optional[float] = None
+    customer_Phoneno : Optional[str] = None
 
 
 class Profile(BaseModel):
@@ -152,5 +155,13 @@ class Ratings(BaseModel):
     # user_id : Optional[int] = None
     # venue_id : Optional[int] = None
     ratings: float
+    class Config:
+        from_attributes = True
+
+class BusinessHours(BaseModel):
+    day_of_week : str
+    opens : int
+    closes : int
+
     class Config:
         from_attributes = True

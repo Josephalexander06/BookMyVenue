@@ -112,11 +112,11 @@ export default function NewVenueWizard() {
 
   const submit = async () => {
     try {
-      await createVenue.mutateAsync({
+      const createdVenue = await createVenue.mutateAsync({
         ...form,
         imageFiles: selectedFiles,
       });
-      router.push("/dashboard/owner/venues");
+      router.push(`/dashboard/owner/venues/${createdVenue.id}/timeslot`);
     } catch (e) {
       console.error(e);
     }

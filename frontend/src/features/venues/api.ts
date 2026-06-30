@@ -94,6 +94,8 @@ export async function getVenues(
       availability: v.availability ? "Available" : "Unavailable",
       rating: v.rating !== undefined && v.rating !== null ? Number(v.rating) : undefined,
       userCount: v.user_count !== undefined && v.user_count !== null ? Number(v.user_count) : undefined,
+      timeslots_setup_completed: v.timeslots_setup_completed ?? false,
+      status: v.status,
     };
   });
 
@@ -158,6 +160,8 @@ export async function getVenueById(id: string): Promise<Venue> {
     availability: data.availability ? "Available" : "Unavailable",
     rating: data.rating !== undefined && data.rating !== null ? Number(data.rating) : undefined,
     userCount: data.user_count !== undefined && data.user_count !== null ? Number(data.user_count) : undefined,
+    timeslots_setup_completed: data.timeslots_setup_completed ?? false,
+    status: data.status,
   };
 }
 
@@ -211,6 +215,8 @@ export async function createVenue(payload: CreateVenuePayload): Promise<Venue> {
     imageUrl: images.length > 0 ? images[0].image_path : (res.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"),
     images,
     availability: res.availability ? "Available" : "Unavailable",
+    timeslots_setup_completed: res.timeslots_setup_completed ?? false,
+    status: res.status,
   };
 }
 
@@ -247,6 +253,8 @@ export async function updateVenue(
     imageUrl: images.length > 0 ? images[0].image_path : (data.imageUrl ?? "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"),
     images,
     availability: data.availability ? "Available" : "Unavailable",
+    timeslots_setup_completed: data.timeslots_setup_completed ?? false,
+    status: data.status,
   };
 }
 
@@ -312,4 +320,24 @@ export async function rejectVenue(id: string): Promise<void> {
 
 export async function blockVenue(id: string): Promise<void> {
   await apiClient.patch(`/venues/${id}/block`);
+}
+
+export interface BusinessHoursPayload {
+  day_of_week: string;
+  opens: number;
+  closes: number;
+}
+
+export async function getVenueTimeslots(id: string): Promise<BusinessHoursPayload[]> {
+  const { data } = await apiClient.get<any[]>(`/venues/${id}/timeslots`);
+  return data.map((t: any) => ({
+    day_of_week: t.day_of_week,
+    opens: Number(t.opens),
+    closes: Number(t.closes),
+  }));
+}
+
+export async function updateVenueTimeslots(id: string, timeslots: BusinessHoursPayload[]): Promise<any> {
+  const { data } = await apiClient.put(`/venues/${id}/timeslots`, timeslots);
+  return data;
 }

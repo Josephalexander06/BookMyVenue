@@ -2,7 +2,7 @@ import os
 from uuid_extensions import uuid7
 from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
 from backend.utils.db_helper import get_db
-from backend.utils.schema import CreateVenue, GetVenue, Ratings, GetMyVenue
+from backend.utils.schema import CreateVenue, GetVenue, BusinessHours, GetMyVenue
 from backend import models
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -11,7 +11,7 @@ import requests
 from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_Distance
 from sqlalchemy import func
 from backend.routers.auth import get_current_user
-from .users import admin_required
+from .users import admin_required,access_required
 
 router = APIRouter(
     prefix="/venues",
@@ -105,6 +105,12 @@ def geocode(address:str):
 async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(get_current_user)):
     id = current_user[0]
     venues  = db.query(models.Venue).filter(models.Venue.owner_id == id).all()
+
+    for venue in venues:
+        slots_count = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == venue.id).count()
+        venue.timeslots_setup_completed = slots_count > 0
+
+        print(venue.status)
     return venues
 
 
@@ -165,6 +171,9 @@ async def get_venue(id:int,db: Session = Depends(get_db)):
     venue.images = image
     venue.rating = avg_rating  
     venue.user_count = user_cut
+    
+    slots_count = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == venue.id).count()
+    venue.timeslots_setup_completed = slots_count > 0
     
     return  venue
 
@@ -277,3 +286,34 @@ def block_venue(id:int,db:Session = Depends(get_db),current_user:int = Depends(a
     db.refresh(venue)
     
     return {"BLOCKED"}
+
+
+@router.get("/{id}/timeslots")
+def get_timeslot(id:int,db:Session=Depends(get_db)):
+
+    time = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == id).all()
+
+    return time
+
+
+
+@router.put("/{id}/timeslots")
+def set_bulk_timeslots(id:int,slots:List[BusinessHours],db:Session = Depends(get_db)):
+    venue = db.query(models.Venue).filter(models.Venue.id == id).first()
+    if not venue:
+        raise HTTPException(status_code=404,detail="Venue not found")
+    
+    # Delete existing timeslots to avoid duplicates
+    db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == id).delete()
+
+    for slot in slots:
+        db_slot = models.TimeSlot(
+                venue_id=id,
+                day_of_week=slot.day_of_week,
+                opens=slot.opens,
+                closes=slot.closes
+            )
+        db.add(db_slot)
+
+    db.commit()
+    return {"status": "success"}

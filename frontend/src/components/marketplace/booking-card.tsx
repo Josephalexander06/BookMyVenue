@@ -112,6 +112,11 @@ const isPastDate = bookingDate < today;
                 {booking.attendees} guests
               </span>
             )}
+            {booking.owner_Phoneno && (
+              <span className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-md text-[10px] font-bold">
+                Owner Phone: {booking.owner_Phoneno}
+              </span>
+            )}
           </div>
         </div>
 

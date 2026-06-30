@@ -12,6 +12,9 @@ import {
   approveVenue,
   rejectVenue,
   blockVenue,
+  getVenueTimeslots,
+  updateVenueTimeslots,
+  type BusinessHoursPayload,
 } from "@/features/venues/api";
 import type { CreateVenuePayload, VenueFilters } from "@/types/venue";
 
@@ -103,6 +106,27 @@ export function useBlockVenue() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-venues"] });
       queryClient.invalidateQueries({ queryKey: ["venues"] });
+    },
+  });
+}
+
+export function useVenueTimeslots(id: string) {
+  return useQuery({
+    queryKey: ["venue-timeslots", id],
+    queryFn: () => getVenueTimeslots(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useUpdateVenueTimeslots() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, timeslots }: { id: string; timeslots: BusinessHoursPayload[] }) =>
+      updateVenueTimeslots(id, timeslots),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["venue-timeslots", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["venues"] });
+      queryClient.invalidateQueries({ queryKey: ["venue", variables.id] });
     },
   });
 }
