@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { useAdminVenues, useApproveVenue, useRejectVenue, useBlockVenue } from "@/features/venues/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
+import MapPicker from "@/components/ui/map-picker";
 import { 
   Building2, 
   MapPin, 
@@ -475,6 +476,20 @@ export default function AdminVenuesPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Map Location View */}
+              {selectedVenue.latitude !== undefined && selectedVenue.longitude !== undefined && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Map View</h3>
+                  <div className="rounded-2xl overflow-hidden border border-slate-150 shadow-soft">
+                    <MapPicker
+                      latitude={selectedVenue.latitude}
+                      longitude={selectedVenue.longitude}
+                      readOnly={true}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Amenities */}
               {selectedVenue.amenities && selectedVenue.amenities.length > 0 && (

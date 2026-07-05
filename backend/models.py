@@ -13,8 +13,6 @@ class Venue(Base):
     address = Column(String,nullable=False)
     latitude = Column(DECIMAL,nullable=False)
     longitude = Column(DECIMAL,nullable=False)
-    price_per_day = Column(Float,nullable=True)
-    price_per_hour = Column(Float,nullable=True)
     capacity = Column(Integer,nullable=True)
     booking_allowed_mode = Column(String,default="BOTH")
     availability = Column(Boolean,server_default='TRUE')
@@ -137,6 +135,8 @@ class TimeSlot(Base):
     day_of_week = Column(String)
     opens = Column(Integer,default='9')
     closes = Column(Integer,default='10')
+    price_per_day = Column(Float,nullable=True)
+    price_per_hour = Column(Float,nullable=True)
 
     venue = relationship("Venue",back_populates="time")
 

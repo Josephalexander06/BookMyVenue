@@ -46,6 +46,8 @@ interface DaySlot {
   enabled: boolean;
   opens: number;
   closes: number;
+  price_per_day?: number;
+  price_per_hour?: number;
 }
 
 export default function VenueTimeslotPage() {
@@ -62,7 +64,9 @@ export default function VenueTimeslotPage() {
       day_of_week: day,
       enabled: true,
       opens: 9, // Model default: 9:00 AM
-      closes: 10, // Model default: 10:00 AM
+      closes: 23, // Model default: 10:00 AM
+      price_per_day: 1000,
+      price_per_hour: 200,
     }))
   );
 
@@ -80,6 +84,8 @@ export default function VenueTimeslotPage() {
             enabled: true,
             opens: found.opens,
             closes: found.closes,
+            price_per_day: found.price_per_day ?? 1000,
+            price_per_hour: found.price_per_hour ?? 120,
           };
         } else {
           return {
@@ -87,6 +93,8 @@ export default function VenueTimeslotPage() {
             enabled: false,
             opens: 9,
             closes: 10,
+            price_per_day: 1000,
+            price_per_hour: 120,
           };
         }
       });
@@ -106,6 +114,12 @@ export default function VenueTimeslotPage() {
     );
   };
 
+  const handleChangePrice = (idx: number, field: "price_per_day" | "price_per_hour", val: number) => {
+    setSlots((prev) =>
+      prev.map((s, i) => (i === idx ? { ...s, [field]: val } : s))
+    );
+  };
+
   // Preset: Model Defaults (9:00 AM - 10:00 AM)
   const applyModelDefaults = () => {
     setSlots(
@@ -114,6 +128,8 @@ export default function VenueTimeslotPage() {
         enabled: true,
         opens: 9,
         closes: 10,
+        price_per_day: 1000,
+        price_per_hour: 120,
       }))
     );
   };
@@ -126,6 +142,8 @@ export default function VenueTimeslotPage() {
         enabled: true,
         opens: 9,
         closes: 22,
+        price_per_day: 1000,
+        price_per_hour: 120,
       }))
     );
   };
@@ -149,6 +167,8 @@ export default function VenueTimeslotPage() {
         day_of_week: s.day_of_week,
         opens: s.opens,
         closes: s.closes,
+        price_per_day: s.price_per_day ?? 1000,
+        price_per_hour: s.price_per_hour ?? 120,
       }));
 
     if (payload.length === 0) {
@@ -273,11 +293,10 @@ export default function VenueTimeslotPage() {
             {slots.map((slot, idx) => (
               <div
                 key={slot.day_of_week}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border transition-all duration-200 ${
-                  slot.enabled
-                    ? "border-slate-150 bg-white shadow-sm"
-                    : "border-slate-100 bg-slate-50/40 opacity-70"
-                }`}
+                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border transition-all duration-200 ${slot.enabled
+                  ? "border-slate-150 bg-white shadow-sm"
+                  : "border-slate-100 bg-slate-50/40 opacity-70"
+                  }`}
               >
                 {/* Day label & Toggle */}
                 <div className="flex items-center gap-3 min-w-[150px]">
@@ -296,16 +315,16 @@ export default function VenueTimeslotPage() {
                   </label>
                 </div>
 
-                {/* Dropdowns if enabled, otherwise Closed text */}
+                {/* Dropdowns & Price inputs if enabled, otherwise Closed text */}
                 {slot.enabled ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-4">
                     {/* Open Select */}
                     <div className="space-y-1">
-                      <span className="block text-[9px] font-bold text-slate-450 uppercase tracking-wider">Opens</span>
+                      <span className="block text-[9px] font-bold text-slate-455 uppercase tracking-wider">Opens</span>
                       <select
                         value={slot.opens}
                         onChange={(e) => handleChangeHours(idx, "opens", Number(e.target.value))}
-                        className="h-9 w-32 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="h-9 w-28 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         {TIME_HOURS.slice(0, 24).map((h) => (
                           <option key={`open-${h.value}`} value={h.value}>
@@ -315,7 +334,7 @@ export default function VenueTimeslotPage() {
                       </select>
                     </div>
 
-                    <span className="text-slate-300 font-bold self-end mb-2.5">—</span>
+                    <span className="text-slate-350 font-bold self-end mb-2">—</span>
 
                     {/* Close Select */}
                     <div className="space-y-1">
@@ -323,7 +342,7 @@ export default function VenueTimeslotPage() {
                       <select
                         value={slot.closes}
                         onChange={(e) => handleChangeHours(idx, "closes", Number(e.target.value))}
-                        className="h-9 w-32 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="h-9 w-28 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         {TIME_HOURS.slice(1).map((h) => (
                           <option key={`close-${h.value}`} value={h.value}>
@@ -331,6 +350,36 @@ export default function VenueTimeslotPage() {
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    <span className="hidden md:inline text-slate-200">|</span>
+
+                    {/* Price per day Input */}
+                    <div className="space-y-1">
+                      <span className="block text-[9px] font-bold text-slate-455 uppercase tracking-wider">Price/Day</span>
+                      <div className="relative rounded-lg border border-slate-200 bg-white overflow-hidden flex items-center h-9 w-24">
+                        <span className="px-2 text-slate-400 text-[10px] font-bold border-r border-slate-200 bg-slate-50 h-full flex items-center">₹</span>
+                        <input
+                          type="number"
+                          value={slot.price_per_day ?? ""}
+                          onChange={(e) => handleChangePrice(idx, "price_per_day", Number(e.target.value))}
+                          className="w-full text-xs font-bold text-slate-700 px-2 focus:outline-none border-none h-full bg-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Price per hour Input */}
+                    <div className="space-y-1">
+                      <span className="block text-[9px] font-bold text-slate-455 uppercase tracking-wider">Price/Hour</span>
+                      <div className="relative rounded-lg border border-slate-200 bg-white overflow-hidden flex items-center h-9 w-24">
+                        <span className="px-2 text-slate-400 text-[10px] font-bold border-r border-slate-200 bg-slate-50 h-full flex items-center">₹</span>
+                        <input
+                          type="number"
+                          value={slot.price_per_hour ?? ""}
+                          onChange={(e) => handleChangePrice(idx, "price_per_hour", Number(e.target.value))}
+                          className="w-full text-xs font-bold text-slate-700 px-2 focus:outline-none border-none h-full bg-transparent"
+                        />
+                      </div>
                     </div>
                   </div>
                 ) : (

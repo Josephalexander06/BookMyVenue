@@ -213,45 +213,17 @@ export default function OwnerVenuesPage() {
                     </Select>
                   </div>
 
-                  {/* Price per Day & Hour Fields */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-1.5 col-span-1">
-                      <label className="text-sm font-medium text-slate-700">Capacity</label>
-                      <Input
-                        type="number"
-                        value={form.capacity}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, capacity: Number(e.target.value) }))
-                        }
-                        className="h-11 rounded-xl border-slate-200"
-                      />
-                    </div>
-                    {(form.allowedModes === "DAILY" || form.allowedModes === "BOTH" || !form.allowedModes) && (
-                      <div className="space-y-1.5 col-span-1">
-                        <label className="text-sm font-medium text-slate-700">Price / day</label>
-                        <Input
-                          type="number"
-                          value={form.pricing}
-                          onChange={(e) =>
-                            setForm((p) => ({ ...p, pricing: Number(e.target.value) }))
-                          }
-                          className="h-11 rounded-xl border-slate-200"
-                        />
-                      </div>
-                    )}
-                    {(form.allowedModes === "HOURLY" || form.allowedModes === "BOTH") && (
-                      <div className="space-y-1.5 col-span-1">
-                        <label className="text-sm font-medium text-slate-700">Price / hour</label>
-                        <Input
-                          type="number"
-                          value={form.pricePerHour ?? Math.round(form.pricing / 8)}
-                          onChange={(e) =>
-                            setForm((p) => ({ ...p, pricePerHour: Number(e.target.value) }))
-                          }
-                          className="h-11 rounded-xl border-slate-200"
-                        />
-                      </div>
-                    )}
+                  {/* Capacity Field */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700">Capacity</label>
+                    <Input
+                      type="number"
+                      value={form.capacity}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, capacity: Number(e.target.value) }))
+                      }
+                      className="h-11 rounded-xl border-slate-200 w-full"
+                    />
                   </div>
 
                   {/* Address */}
@@ -448,15 +420,29 @@ export default function OwnerVenuesPage() {
                       <Users className="h-3.5 w-3.5" />
                       {venue.capacity}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
-                      <IndianRupee className="h-3.5 w-3.5" />
-                      {venue.pricing}/day
-                    </span>
-                    {venue.pricePerHour && (
+                    {venue.allowedModes === "HOURLY" ? (
                       <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
                         <IndianRupee className="h-3.5 w-3.5" />
-                        {venue.pricePerHour}/hr
+                        {venue.pricePerHour ? `${venue.pricePerHour}/hr` : "Slot Pricing"}
                       </span>
+                    ) : venue.allowedModes === "DAILY" ? (
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
+                        <IndianRupee className="h-3.5 w-3.5" />
+                        {venue.pricing ? `${venue.pricing}/day` : "Slot Pricing"}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
+                          <IndianRupee className="h-3.5 w-3.5" />
+                          {venue.pricing ? `${venue.pricing}/day` : "Slot Pricing"}
+                        </span>
+                        {venue.pricePerHour ? (
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
+                            <IndianRupee className="h-3.5 w-3.5" />
+                            {venue.pricePerHour}/hr
+                          </span>
+                        ) : null}
+                      </>
                     )}
                   </div>
 

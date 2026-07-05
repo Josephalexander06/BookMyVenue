@@ -54,15 +54,23 @@ const votesCount = venue.userCount ?? 0;
         <div className="flex items-baseline gap-1 pt-2 border-t border-slate-100/50 mt-2">
           <span className="text-sm font-black text-slate-900">
             {venue.allowedModes === "HOURLY" ? (
-              <>
-                {formatCurrency(venue.pricePerHour ?? 0)}
-                <span className="text-[10px] font-semibold text-slate-400"> / hr</span>
-              </>
+              venue.pricePerHour ? (
+                <>
+                  {formatCurrency(venue.pricePerHour)}
+                  <span className="text-[10px] font-semibold text-slate-400"> / hr</span>
+                </>
+              ) : (
+                "Slot Pricing"
+              )
             ) : (
-              <>
-                {formatCurrency(venue.pricing)}
-                <span className="text-[10px] font-semibold text-slate-400"> / day</span>
-              </>
+              venue.pricing ? (
+                <>
+                  {formatCurrency(venue.pricing)}
+                  <span className="text-[10px] font-semibold text-slate-400"> / day</span>
+                </>
+              ) : (
+                "Slot Pricing"
+              )
             )}
           </span>
           {venue.capacity && (
@@ -106,8 +114,8 @@ export function VenueCardCompact({ venue }: { venue: Venue }) {
         <p className="text-[10px] text-slate-400 capitalize font-semibold">{venue.type.replace("_", " ")}</p>
         <p className="text-xs font-black text-slate-900 pt-0.5">
           {venue.allowedModes === "HOURLY"
-            ? `${formatCurrency(venue.pricePerHour ?? 0)}/hr`
-            : `${formatCurrency(venue.pricing)}/day`}
+            ? (venue.pricePerHour ? `${formatCurrency(venue.pricePerHour)}/hr` : "Slot Pricing")
+            : (venue.pricing ? `${formatCurrency(venue.pricing)}/day` : "Slot Pricing")}
         </p>
       </div>
     </Link>

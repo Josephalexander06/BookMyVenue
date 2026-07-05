@@ -141,13 +141,21 @@ const isPastDate = bookingDate < today;
           {venue && (
             <p className="text-xs font-bold text-slate-900">
               {booking.mode === "HOURLY" ? (
-                <>
-                  {formatCurrency(venue.pricePerHour ?? 0)} <span className="text-[10px] text-slate-400 font-normal">/ hr</span>
-                </>
+                venue.pricePerHour ? (
+                  <>
+                    {formatCurrency(venue.pricePerHour)} <span className="text-[10px] text-slate-400 font-normal">/ hr</span>
+                  </>
+                ) : (
+                  "Slot Pricing"
+                )
               ) : (
-                <>
-                  {formatCurrency(venue.pricing)} <span className="text-[10px] text-slate-400 font-normal">/ day</span>
-                </>
+                venue.pricing ? (
+                  <>
+                    {formatCurrency(venue.pricing)} <span className="text-[10px] text-slate-400 font-normal">/ day</span>
+                  </>
+                ) : (
+                  "Slot Pricing"
+                )
               )}
             </p>
           )}

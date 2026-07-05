@@ -129,7 +129,7 @@ interface CalendarProps {
   checkOutDate?: string;
   onChangeRange?: (checkIn: string, checkOut: string | null) => void;
   bookedDates: string[];
-  timeslots?: { day_of_week: string; opens: number; closes: number }[];
+  timeslots?: any[];
 }
 
 // Custom Premium Inline Calendar
@@ -430,7 +430,7 @@ export default function BookingPage() {
   const createBooking = useCreateBooking();
   const { data: venue, isLoading: venueLoading } = useVenue(params.id);
   const { data: bookedSlots } = useBookedDates(venue?.id || params.id);
-  const { data: timeslots } = useVenueTimeslots(venue?.id || params.id);
+  const { data: timeslots, isLoading: timeslotsLoading } = useVenueTimeslots(venue?.id || params.id);
 
   const [bookingMode, setBookingMode] = useState<"DAILY" | "HOURLY">("DAILY");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -441,7 +441,7 @@ export default function BookingPage() {
     const y = today.getFullYear();
     const m = String(today.getMonth() + 1).padStart(2, "0");
     const d = String(today.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    return `${y}-${m}-${d}`
   });
 
   const [checkInDate, setCheckInDate] = useState(() => {
@@ -463,8 +463,10 @@ export default function BookingPage() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showStartPop, setShowStartPop] = useState(false);
   const [showEndPop, setShowEndPop] = useState(false);
+  const [hoveredHour, setHoveredHour] = useState<string | null>(null);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
+  const [isSelectingEnd, setIsSelectingEnd] = useState(false);
   const [note, setNote] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -473,6 +475,7 @@ export default function BookingPage() {
     setShowCalendar(false);
     setShowStartPop(false);
     setShowEndPop(false);
+    setIsSelectingEnd(false);
   }, [bookingMode]);
 
   const venuePrice = venue?.pricing ?? 0;
@@ -497,6 +500,13 @@ export default function BookingPage() {
       setDate(checkInDate);
     }
   }, [bookingMode]);
+
+  // Reset selection state when date changes
+  useEffect(() => {
+    setIsSelectingEnd(false);
+  }, [date]);
+
+
 
   // Booked slots/intervals calculations
   const bookedIntervalsForSelectedDate = useMemo(() => {
@@ -553,10 +563,56 @@ export default function BookingPage() {
     );
   };
 
+  const daySlot = useMemo(() => {
+    if (!date || !timeslots) return null;
+    const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dObj = new Date(date + "T12:00:00");
+    const dName = weekdayNames[dObj.getDay()];
+    return timeslots.find((s) => s.day_of_week.toLowerCase() === dName.toLowerCase()) || null;
+  }, [date, timeslots]);
+
+  const weekdayName = useMemo(() => {
+    if (!date) return "";
+    const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dObj = new Date(date + "T12:00:00");
+    return weekdayNames[dObj.getDay()];
+  }, [date]);
+
+  const hourlySlots = useMemo(() => {
+    if (!daySlot) return [];
+    const slots = [];
+    for (let h = daySlot.opens; h < daySlot.closes; h++) {
+      const value = String(h).padStart(2, "0") + ":00";
+      const endValue = String(h + 1).padStart(2, "0") + ":00";
+      
+      const ampm = h >= 12 ? "PM" : "AM";
+      const displayHour = h % 12 || 12;
+      
+      const nextH = h + 1;
+      const nextAmpm = nextH >= 12 ? "PM" : "AM";
+      const nextDisplayHour = nextH % 12 || 12;
+      
+      const label = `${displayHour} ${ampm} - ${nextDisplayHour} ${nextAmpm}`;
+      
+      slots.push({
+        value,
+        endValue,
+        label,
+        hour: h
+      });
+    }
+    return slots;
+  }, [daySlot]);
+
   // Filtered hours
   const filteredStartOptions = useMemo(() => {
-    return TIME_OPTIONS.filter((opt) => !isTimeBooked(opt.value));
-  }, [bookedIntervalsForSelectedDate]);
+    if (!daySlot) return [];
+    return TIME_OPTIONS.filter((opt) => {
+      const hour = parseInt(opt.value.split(":")[0]);
+      const inOperatingHours = hour >= daySlot.opens && hour < daySlot.closes;
+      return inOperatingHours && !isTimeBooked(opt.value);
+    });
+  }, [daySlot, bookedIntervalsForSelectedDate]);
 
   const nextBookedStartTime = useMemo(() => {
     if (!startTime || bookedIntervalsForSelectedDate.length === 0) return null;
@@ -568,12 +624,16 @@ export default function BookingPage() {
   }, [startTime, bookedIntervalsForSelectedDate]);
 
   const filteredEndOptions = useMemo(() => {
+    if (!daySlot) return [];
     return TIME_OPTIONS.filter((opt) => {
+      const hour = parseInt(opt.value.split(":")[0]);
+      const inOperatingHours = hour > daySlot.opens && hour <= daySlot.closes;
+      if (!inOperatingHours) return false;
       if (opt.value <= startTime) return false;
       if (nextBookedStartTime && opt.value > nextBookedStartTime) return false;
       return true;
     });
-  }, [startTime, nextBookedStartTime]);
+  }, [daySlot, startTime, nextBookedStartTime]);
 
   // Reset selected times if they become unavailable
   useEffect(() => {
@@ -596,8 +656,9 @@ export default function BookingPage() {
 
   // Check if a day in hourly mode has no slots left
   const isHourlyDayFullyBooked = useMemo(() => {
+    if (!daySlot) return false;
     return bookingMode === "HOURLY" && date !== "" && filteredStartOptions.length === 0;
-  }, [bookingMode, date, filteredStartOptions]);
+  }, [bookingMode, date, filteredStartOptions, daySlot]);
 
   const isBookingBlocked = useMemo(() => {
     if (bookingMode === "DAILY") {
@@ -617,12 +678,29 @@ export default function BookingPage() {
   // Calculate duration and base price
   const billingDetails = useMemo(() => {
     if (bookingMode === "DAILY") {
-      const numDays = (checkInDate && checkOutDate) ? getDaysBetween(checkInDate, checkOutDate) : 1;
-      const base = venuePrice * numDays;
+      const dates = (checkInDate && checkOutDate) ? getDatesInRange(checkInDate, checkOutDate) : [];
+      let base = 0;
+      const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      
+      if (dates.length > 0) {
+        dates.forEach((dateStr) => {
+          const dObj = new Date(dateStr + "T12:00:00");
+          const dName = weekdayNames[dObj.getDay()];
+          const slot = timeslots?.find((s) => s.day_of_week.toLowerCase() === dName.toLowerCase());
+          const price = (slot && slot.price_per_day !== undefined && slot.price_per_day !== null && slot.price_per_day > 0)
+            ? slot.price_per_day
+            : venuePrice;
+          base += price;
+        });
+      } else {
+        base = venuePrice;
+      }
+      
+      const numDays = dates.length || 1;
       const fee = Math.round(base * 0.05);
       return {
         durationText: `${numDays} ${numDays === 1 ? "Day" : "Days"}`,
-        rateText: `${formatCurrency(venuePrice)} / day`,
+        rateText: numDays === 1 ? `${formatCurrency(base)} / day` : `Custom slot pricing`,
         basePrice: base,
         fee: fee,
         total: base + fee,
@@ -631,17 +709,23 @@ export default function BookingPage() {
       const startIdx = TIME_OPTIONS.findIndex((t) => t.value === startTime);
       const endIdx = TIME_OPTIONS.findIndex((t) => t.value === endTime);
       const hours = Math.max(1, endIdx - startIdx);
-      const base = hourlyRate * hours;
+      
+      // Get the slot for the selected date
+      const price = (daySlot && daySlot.price_per_hour !== undefined && daySlot.price_per_hour !== null && daySlot.price_per_hour > 0)
+        ? daySlot.price_per_hour
+        : hourlyRate;
+        
+      const base = price * hours;
       const fee = Math.round(base * 0.05);
       return {
         durationText: `${hours} ${hours === 1 ? "Hour" : "Hours"}`,
-        rateText: `${formatCurrency(hourlyRate)} / hour`,
+        rateText: `${formatCurrency(price)} / hour`,
         basePrice: base,
         fee: fee,
         total: base + fee,
       };
     }
-  }, [bookingMode, venuePrice, hourlyRate, startTime, endTime, checkInDate, checkOutDate]);
+  }, [bookingMode, venuePrice, hourlyRate, startTime, endTime, checkInDate, checkOutDate, timeslots, daySlot]);
 
   const handleRangeChange = (checkIn: string, checkOut: string | null) => {
     setCheckInDate(checkIn);
@@ -1011,138 +1095,131 @@ export default function BookingPage() {
 
             {/* Hourly Slot Selection */}
             {bookingMode === "HOURLY" && !isDateConflict && date && (
-              <div className="space-y-3 relative">
+              <div className="space-y-4 relative">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
                   Select Time Slot
                 </label>
-                
-                <div className="relative">
-                  <div className="w-full grid grid-cols-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden text-left">
-                    {/* Start Time Box */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowStartPop(!showStartPop);
-                        setShowEndPop(false);
-                        setShowCalendar(false);
-                      }}
-                      className="px-4 py-3 flex flex-col justify-center border-r border-slate-100 hover:bg-slate-50/50 transition-colors text-left"
-                    >
-                      <span className="text-[10px] font-bold text-[#F84464] uppercase tracking-wider">
-                        Start Time
-                      </span>
-                      <span className="text-sm font-bold text-slate-800 mt-0.5 truncate">
-                        {startTime ? TIME_OPTIONS.find(o => o.value === startTime)?.label : "Select time"}
-                      </span>
-                    </button>
-                    
-                    {/* End Time Box */}
-                    <button
-                      type="button"
-                      disabled={!startTime}
-                      onClick={() => {
-                        setShowStartPop(false);
-                        setShowEndPop(!showEndPop);
-                        setShowCalendar(false);
-                      }}
-                      className="px-4 py-3 flex flex-col justify-center hover:bg-slate-50/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
-                    >
-                      <span className="text-[10px] font-bold text-[#F84464] uppercase tracking-wider">
-                        End Time
-                      </span>
-                      <span className="text-sm font-bold text-slate-800 mt-0.5 truncate">
-                        {endTime ? TIME_OPTIONS.find(o => o.value === endTime)?.label : "Select time"}
-                      </span>
-                    </button>
+
+                {/* Read-only Selection display */}
+                <div className="w-full grid grid-cols-2 rounded-2xl border border-slate-200 bg-slate-50/50 p-1 text-left text-xs gap-1">
+                  <div className="px-4 py-2.5 flex flex-col justify-center bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <span className="text-[9px] font-extrabold text-[#F84464] uppercase tracking-wider">Start Time</span>
+                    <span className="text-sm font-bold text-slate-800 mt-0.5">
+                      {startTime ? TIME_OPTIONS.find(o => o.value === startTime)?.label : "Click timeline below"}
+                    </span>
                   </div>
+                  <div className="px-4 py-2.5 flex flex-col justify-center bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <span className="text-[9px] font-extrabold text-[#F84464] uppercase tracking-wider">End Time</span>
+                    <span className="text-sm font-bold text-slate-800 mt-0.5">
+                      {endTime ? TIME_OPTIONS.find(o => o.value === endTime)?.label : "Click timeline below"}
+                    </span>
+                  </div>
+                </div>
 
-                  {/* Popover for Start Time Grid */}
-                  {showStartPop && (
-                    <div className="absolute left-0 top-full mt-2 z-20 w-full animate-fade-in bg-white border border-slate-200 rounded-3xl p-4 shadow-lg">
-                      <div className="flex justify-between items-center mb-2.5 px-1">
-                        <span className="text-xs font-bold text-slate-800">Select Start Time</span>
-                        <button
-                          type="button"
-                          onClick={() => setShowStartPop(false)}
-                          className="text-[10px] font-bold text-[#F84464]"
-                        >
-                          Done
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-50/50 p-2.5 rounded-2xl border border-slate-100">
-                        {TIME_OPTIONS.map((opt) => {
-                          const isBooked = isTimeBooked(opt.value);
-                          const isSelected = startTime === opt.value;
-                          return (
-                            <button
-                              key={`start-pop-${opt.value}`}
-                              type="button"
-                              disabled={isBooked}
-                              onClick={() => {
-                                setStartTime(opt.value);
-                                setShowStartPop(false);
-                                setShowEndPop(true);
-                              }}
-                              className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border ${
-                                isSelected
-                                  ? "bg-[#F84464] border-[#F84464] text-white shadow-soft"
-                                  : isBooked
-                                  ? "bg-slate-100/70 border-slate-200 text-slate-300 cursor-not-allowed line-through"
-                                  : "bg-white border-slate-200 text-slate-700 hover:border-[#F84464]/30 hover:bg-[#F84464]/5"
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                {/* Interactive Visual Timeline */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Interactive Timeline</span>
+                  
+                  {timeslotsLoading ? (
+                    <p className="text-xs text-slate-400 animate-pulse">Loading operating schedule...</p>
+                  ) : !daySlot ? (
+                    <div className="rounded-2xl bg-amber-50/50 border border-amber-100 p-4 text-xs font-semibold text-amber-800">
+                      This venue is closed or has no operating hours configured on {weekdayName}s.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2.5 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
+                      {hourlySlots.map((slot) => {
+                        const isBooked = isTimeBooked(slot.value);
+                        
+                        // Selection states
+                        const isSelectedStart = startTime === slot.value;
+                        const isSelectedEnd = endTime === slot.endValue;
+                        const isWithinSelectedRange = startTime && endTime && slot.value >= startTime && slot.endValue <= endTime;
+                        
+                        // Hover range preview state
+                        const isWithinHoverRange = startTime && isSelectingEnd && hoveredHour && slot.value >= startTime && slot.endValue <= hoveredHour;
+                        
+                        const isSelected = isSelectedStart || isSelectedEnd || isWithinSelectedRange;
+
+                        let btnClass = "py-3 px-2 rounded-xl text-xs font-bold transition-all border flex flex-col items-center justify-center gap-1 ";
+                        if (isBooked) {
+                          btnClass += "bg-rose-50/40 border-rose-100 text-rose-300 cursor-not-allowed line-through";
+                        } else if (isSelected) {
+                          btnClass += "bg-[#F84464] border-[#F84464] text-white shadow-soft";
+                        } else if (isWithinHoverRange) {
+                          btnClass += "bg-rose-50/80 border-rose-200 text-[#F84464] scale-[1.02]";
+                        } else {
+                          btnClass += "bg-white border-slate-200 text-slate-700 hover:border-[#F84464]/30 hover:bg-[#F84464]/5 hover:scale-[1.01]";
+                        }
+
+                        const handleSlotClick = () => {
+                          if (isBooked) return;
+
+                          // If we are starting a selection, or we just completed a range selection:
+                          if (!startTime || !isSelectingEnd) {
+                            setStartTime(slot.value);
+                            setEndTime(slot.endValue);
+                            setIsSelectingEnd(true);
+                          } else {
+                            // Currently selecting the end of a range
+                            if (slot.endValue > endTime) {
+                              // Verify if selecting this range crosses any booked hours
+                              const hasBookedCross = bookedIntervalsForSelectedDate.some(
+                                (interval) => startTime < interval.end && slot.endValue > interval.start
+                              );
+                              if (hasBookedCross) {
+                                // Crossed a booked slot: reset selection to just this slot
+                                setStartTime(slot.value);
+                                setEndTime(slot.endValue);
+                                setIsSelectingEnd(true);
+                              } else {
+                                setEndTime(slot.endValue);
+                                setIsSelectingEnd(false);
+                              }
+                            } else {
+                              // Clicked a slot before start time or inside selection: reset to just this slot
+                              setStartTime(slot.value);
+                              setEndTime(slot.endValue);
+                              setIsSelectingEnd(true);
+                            }
+                          }
+                        };
+
+                        return (
+                          <button
+                            key={`timeline-${slot.value}`}
+                            type="button"
+                            disabled={isBooked}
+                            onClick={handleSlotClick}
+                            onMouseEnter={() => !endTime && setHoveredHour(slot.endValue)}
+                            onMouseLeave={() => setHoveredHour(null)}
+                            className={btnClass}
+                          >
+                            <span className="font-bold text-[10px] sm:text-[11px] whitespace-nowrap">{slot.label}</span>
+                            <span className="text-[9px] opacity-60 font-normal">
+                              {isBooked ? "Booked" : isSelected ? "Selected" : "Available"}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
+                </div>
 
-                  {/* Popover for End Time Grid */}
-                  {showEndPop && startTime && (
-                    <div className="absolute left-0 top-full mt-2 z-20 w-full animate-fade-in bg-white border border-slate-200 rounded-3xl p-4 shadow-lg">
-                      <div className="flex justify-between items-center mb-2.5 px-1">
-                        <span className="text-xs font-bold text-slate-800">Select End Time</span>
-                        <button
-                          type="button"
-                          onClick={() => setShowEndPop(false)}
-                          className="text-[10px] font-bold text-[#F84464]"
-                        >
-                          Done
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-50/50 p-2.5 rounded-2xl border border-slate-100">
-                        {TIME_OPTIONS.map((opt) => {
-                          const isAfterStart = opt.value > startTime;
-                          const isPastNextBooked = nextBookedStartTime && opt.value > nextBookedStartTime;
-                          const isValid = isAfterStart && !isPastNextBooked;
-                          const isSelected = endTime === opt.value;
-
-                          return (
-                            <button
-                              key={`end-pop-${opt.value}`}
-                              type="button"
-                              disabled={!isValid}
-                              onClick={() => {
-                                setEndTime(opt.value);
-                                setShowEndPop(false);
-                              }}
-                              className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border ${
-                                isSelected && isValid
-                                  ? "bg-[#F84464] border-[#F84464] text-white shadow-soft"
-                                  : !isValid
-                                  ? "bg-slate-100/50 border-slate-100 text-slate-300 cursor-not-allowed opacity-50"
-                                  : "bg-white border-slate-200 text-slate-700 hover:border-[#F84464]/30 hover:bg-[#F84464]/5"
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                {/* Timeline Legend */}
+                <div className="flex gap-4 items-center justify-center text-[10px] text-slate-400 font-bold border-t border-slate-50 pt-2.5 mt-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-white border border-slate-200" />
+                    Available
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-[#F84464]" />
+                    Selected
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded bg-rose-50 border border-rose-100 line-through" />
+                    Booked
+                  </div>
                 </div>
               </div>
             )}

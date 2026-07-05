@@ -20,7 +20,7 @@ import { ErrorState } from "@/components/dashboard/error-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useVenue } from "@/features/venues/hooks";
+import { useVenue, useVenueTimeslots } from "@/features/venues/hooks";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import VenueMap from "@/components/ui/venue-map";
@@ -52,6 +52,7 @@ export default function VenueDetailPage() {
   const { isAuthenticated, openLogin } = useAuthStore();
   const venueId = params.id;
   const { data: venue, isLoading, isError } = useVenue(venueId);
+  const { data: timeslots } = useVenueTimeslots(venueId);
 
   if (isLoading) {
     return (
@@ -92,6 +93,16 @@ export default function VenueDetailPage() {
   const reviewsCount = venue.userCount !== undefined && venue.userCount !== null
     ? venue.userCount
     : Math.floor(15 + Math.abs(Math.cos(venue.name.charCodeAt(0)) * 85));
+
+  const validDayPrices = timeslots
+    ? timeslots.map(s => s.price_per_day).filter((p): p is number => p !== undefined && p !== null && p > 0)
+    : [];
+  const minPricePerDay = validDayPrices.length > 0 ? Math.min(...validDayPrices) : null;
+
+  const validHourPrices = timeslots
+    ? timeslots.map(s => s.price_per_hour).filter((p): p is number => p !== undefined && p !== null && p > 0)
+    : [];
+  const minPricePerHour = validHourPrices.length > 0 ? Math.min(...validHourPrices) : null;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 space-y-8 animate-fade-in font-sans">
@@ -230,6 +241,45 @@ export default function VenueDetailPage() {
             </div>
           </div>
 
+          {/* Weekly Operating Hours */}
+          <div className="border-b border-slate-100 pb-6 space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">Weekly Operating Hours</h3>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((dayName) => {
+                const slot = timeslots?.find(s => s.day_of_week.toLowerCase() === dayName.toLowerCase());
+                const formatTime = (hour: number) => {
+                  const ampm = hour >= 12 ? "PM" : "AM";
+                  const h = hour % 12 || 12;
+                  return `${h}:00 ${ampm}`;
+                };
+
+                return (
+                  <div key={dayName} className="flex justify-between items-center rounded-xl border border-slate-100 bg-slate-50/30 px-3.5 py-2.5">
+                    <span className="text-xs font-bold text-slate-700">{dayName}</span>
+                    {slot ? (
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/50">
+                          {formatTime(slot.opens)} - {formatTime(slot.closes)}
+                        </span>
+                        {(slot.price_per_day || slot.price_per_hour) ? (
+                          <span className="text-[9px] font-semibold text-slate-500 mt-1 block">
+                            {slot.price_per_day ? `₹${slot.price_per_day}/day` : ""}
+                            {slot.price_per_day && slot.price_per_hour ? " • " : ""}
+                            {slot.price_per_hour ? `₹${slot.price_per_hour}/hr` : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100/50">
+                        Closed
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Venue Map */}
           <div>
             <VenueMap
@@ -250,22 +300,22 @@ export default function VenueDetailPage() {
                 <div>
                   {venue.allowedModes === "HOURLY" ? (
                     <>
-                      <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricePerHour ?? 0)}</span>
+                      <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(minPricePerHour ?? venue.pricePerHour ?? 0)}</span>
                       <span className="text-xs font-semibold text-slate-400"> / hour</span>
                     </>
                   ) : venue.allowedModes === "DAILY" ? (
                     <>
-                      <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricing)}</span>
+                      <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(minPricePerDay ?? venue.pricing)}</span>
                       <span className="text-xs font-semibold text-slate-400"> / day</span>
                     </>
                   ) : (
                     <div className="space-y-1">
                       <div>
-                        <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(venue.pricing)}</span>
+                        <span className="text-2xl font-extrabold text-slate-900">{formatCurrency(minPricePerDay ?? venue.pricing)}</span>
                         <span className="text-xs font-semibold text-slate-400"> / day</span>
                       </div>
                       <div>
-                        <span className="text-base font-bold text-slate-500">{formatCurrency(venue.pricePerHour ?? 0)}</span>
+                        <span className="text-base font-bold text-slate-500">{formatCurrency(minPricePerHour ?? venue.pricePerHour ?? 0)}</span>
                         <span className="text-xs font-semibold text-slate-400"> / hour</span>
                       </div>
                     </div>

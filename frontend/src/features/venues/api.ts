@@ -181,10 +181,10 @@ export async function createVenue(payload: CreateVenuePayload): Promise<Venue> {
   }
 
   if (payload.allowedModes !== "HOURLY") {
-    formData.append("price_per_day", String(payload.pricing));
+    formData.append("price_per_day", String(payload.pricing ?? 0));
   }
   if (payload.allowedModes !== "DAILY") {
-    formData.append("price_per_hour", String(payload.pricePerHour ?? Math.round(payload.pricing / 8)));
+    formData.append("price_per_hour", String(payload.pricePerHour ?? (payload.pricing ? Math.round(payload.pricing / 8) : 0)));
   }
 
   // Append image files
@@ -227,9 +227,9 @@ export async function updateVenue(
   const backendPayload = {
     name: payload.name,
     address: payload.location,
-    price_per_day: payload.allowedModes ? (payload.allowedModes === "HOURLY" ? null : payload.pricing) : payload.pricing,
+    price_per_day: payload.allowedModes ? (payload.allowedModes === "HOURLY" ? null : (payload.pricing ?? 0)) : (payload.pricing ?? 0),
     capacity: payload.capacity,
-    price_per_hour: payload.allowedModes ? (payload.allowedModes === "DAILY" ? null : payload.pricePerHour) : payload.pricePerHour,
+    price_per_hour: payload.allowedModes ? (payload.allowedModes === "DAILY" ? null : (payload.pricePerHour ?? 0)) : (payload.pricePerHour ?? 0),
     booking_allowed_mode: payload.allowedModes,
     latitude: payload.latitude,
     longitude: payload.longitude,
@@ -326,6 +326,8 @@ export interface BusinessHoursPayload {
   day_of_week: string;
   opens: number;
   closes: number;
+  price_per_day?: number;
+  price_per_hour?: number;
 }
 
 export async function getVenueTimeslots(id: string): Promise<BusinessHoursPayload[]> {
@@ -334,6 +336,8 @@ export async function getVenueTimeslots(id: string): Promise<BusinessHoursPayloa
     day_of_week: t.day_of_week,
     opens: Number(t.opens),
     closes: Number(t.closes),
+    price_per_day: t.price_per_day !== undefined && t.price_per_day !== null ? Number(t.price_per_day) : undefined,
+    price_per_hour: t.price_per_hour !== undefined && t.price_per_hour !== null ? Number(t.price_per_hour) : undefined,
   }));
 }
 

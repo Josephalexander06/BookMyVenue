@@ -18,8 +18,10 @@ router = APIRouter(
     tags=["Venue"]
 )
 
-UPLOAD_DIR  = "upload"
-os.makedirs(UPLOAD_DIR,exist_ok=True)
+# Absolute upload directory path to avoid working directory mismatches
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_DIR = os.path.join(BACKEND_DIR, "upload")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=List[GetVenue])
 async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:list[UploadFile] = File(default=[]),db:Session=Depends(get_db),
@@ -56,13 +58,15 @@ async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:
         unique_filename = f"{uuid7()}.{extension}"
         filepath = os.path.join(UPLOAD_DIR,unique_filename)
 
+        print(image)
         content = await image.read()
         with open(filepath,"wb") as f:
             f.write(content)
 
+        db_path = f"upload/{unique_filename}"
         image_record = models.ImageMetaData(
             image_name = image.filename,
-            image_path = filepath,
+            image_path = db_path,
             venue_id = new_venue.id
         )
         db.add(image_record)
@@ -110,12 +114,11 @@ async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(ge
         slots_count = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == venue.id).count()
         venue.timeslots_setup_completed = slots_count > 0
 
-        print(venue.status)
     return venues
 
 
 @router.get("/",status_code=status.HTTP_200_OK,response_model=List[GetVenue])
-async def get_venues(search:Optional[str] = Query(None), type:Optional[str] = Query(None), db:Session=Depends(get_db)):
+async def search_venues(search:Optional[str] = Query(None), type:Optional[str] = Query(None), db:Session=Depends(get_db)):
 
     result = []
     query = db.query(models.Venue)
@@ -155,7 +158,7 @@ def get_admin_venues(db:Session = Depends(get_db),current_user:int = Depends(adm
 
 
 @router.get("/{id}",status_code=status.HTTP_200_OK,response_model=GetVenue)
-async def get_venue(id:int,db: Session = Depends(get_db)):
+async def search_venue_id(id:int,db: Session = Depends(get_db)):
     # print(id)
 
     venue = db.query(models.Venue).filter(models.Venue.id == id).first()
@@ -224,7 +227,7 @@ async def delete_venue(id:int,db:Session=Depends(get_db)):
     if not venue_query:
         raise HTTPException(status_code=404,detail="Venue Not Found")
 
-    venue_query.delete(synchronize_session=False)
+    venue.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -311,7 +314,9 @@ def set_bulk_timeslots(id:int,slots:List[BusinessHours],db:Session = Depends(get
                 venue_id=id,
                 day_of_week=slot.day_of_week,
                 opens=slot.opens,
-                closes=slot.closes
+                closes=slot.closes,
+                price_per_day = slot.price_per_day,
+                price_per_hour = slot.price_per_hour
             )
         db.add(db_slot)
 

@@ -8,17 +8,19 @@ import { Input } from "./input";
 interface MapPickerProps {
   latitude?: number;
   longitude?: number;
-  onChange: (lat: number, lng: number) => void;
+  onChange?: (lat: number, lng: number) => void;
   onAddressChange?: (address: string) => void;
   defaultAddress?: string;
+  readOnly?: boolean;
 }
 
 export default function MapPicker({
   latitude,
   longitude,
-  onChange,
+  onChange = () => {},
   onAddressChange,
   defaultAddress = "",
+  readOnly = false,
 }: MapPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -125,31 +127,37 @@ export default function MapPicker({
     // Create marker
     const marker = L.marker([initialLat, initialLng], {
       icon: customIcon,
-      draggable: true,
+      draggable: !readOnly,
     }).addTo(map);
 
-    // If initial coordinates were set, adjust marker
-    if (latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null) {
-      marker.setLatLng([latitude, longitude]);
+    if (!readOnly) {
+      // If initial coordinates were set, adjust marker
+      if (latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null) {
+        marker.setLatLng([latitude, longitude]);
+      } else {
+        // Trigger onChange once initially to capture default coordinates
+        onChangeRef.current(initialLat, initialLng);
+      }
+
+      // Map click handler
+      map.on("click", (e: any) => {
+        const { lat, lng } = e.latlng;
+        marker.setLatLng([lat, lng]);
+        onChangeRef.current(lat, lng);
+        reverseGeocode(lat, lng);
+      });
+
+      // Marker drag handler
+      marker.on("dragend", (e: any) => {
+        const { lat, lng } = e.target.getLatLng();
+        onChangeRef.current(lat, lng);
+        reverseGeocode(lat, lng);
+      });
     } else {
-      // Trigger onChange once initially to capture default coordinates
-      onChangeRef.current(initialLat, initialLng);
+      if (latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null) {
+        marker.setLatLng([latitude, longitude]);
+      }
     }
-
-    // Map click handler
-    map.on("click", (e: any) => {
-      const { lat, lng } = e.latlng;
-      marker.setLatLng([lat, lng]);
-      onChangeRef.current(lat, lng);
-      reverseGeocode(lat, lng);
-    });
-
-    // Marker drag handler
-    marker.on("dragend", (e: any) => {
-      const { lat, lng } = e.target.getLatLng();
-      onChangeRef.current(lat, lng);
-      reverseGeocode(lat, lng);
-    });
 
     mapRef.current = map;
     markerRef.current = marker;
@@ -218,29 +226,31 @@ export default function MapPicker({
   return (
     <div className="space-y-3.5">
       {/* Search Input Box */}
-      <form onSubmit={searchAddress} className="flex gap-2">
-        <div className="relative flex-1">
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search address or landmark..."
-            className="h-10 rounded-xl pr-9 border-slate-200 shadow-sm focus-visible:ring-1"
-          />
-          <MapPin className="absolute right-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
-        </div>
-        <Button
-          type="submit"
-          disabled={searching}
-          className="h-10 px-4 rounded-xl gap-2 font-semibold shadow-soft hover:shadow-hover text-xs"
-        >
-          {searching ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Search className="h-3.5 w-3.5" />
-          )}
-          Find
-        </Button>
-      </form>
+      {!readOnly && (
+        <form onSubmit={searchAddress} className="flex gap-2">
+          <div className="relative flex-1">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search address or landmark..."
+              className="h-10 rounded-xl pr-9 border-slate-200 shadow-sm focus-visible:ring-1"
+            />
+            <MapPin className="absolute right-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
+          </div>
+          <Button
+            type="submit"
+            disabled={searching}
+            className="h-10 px-4 rounded-xl gap-2 font-semibold shadow-soft hover:shadow-hover text-xs"
+          >
+            {searching ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Search className="h-3.5 w-3.5" />
+            )}
+            Find
+          </Button>
+        </form>
+      )}
 
       {errorMsg && (
         <p className="text-xs font-semibold text-red-500">{errorMsg}</p>
@@ -264,9 +274,11 @@ export default function MapPicker({
         <div>
           Lng: <span className="font-semibold text-slate-800">{longitude?.toFixed(6) ?? "N/A"}</span>
         </div>
-        <div className="text-[10px] text-slate-400 font-sans italic">
-          Drag pin or click map to move
-        </div>
+        {!readOnly && (
+          <div className="text-[10px] text-slate-400 font-sans italic">
+            Drag pin or click map to move
+          </div>
+        )}
       </div>
     </div>
   );

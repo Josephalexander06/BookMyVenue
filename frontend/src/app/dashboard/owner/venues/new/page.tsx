@@ -41,7 +41,6 @@ const steps = [
   { id: "basics", label: "Basics" },
   { id: "photos", label: "Photos" },
   { id: "amenities", label: "Amenities" },
-  { id: "pricing", label: "Pricing" },
   { id: "review", label: "Review" },
 ];
 
@@ -182,7 +181,7 @@ export default function NewVenueWizard() {
       <header className="md:hidden sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm flex items-center justify-between px-6 py-4">
         <span className="text-sm font-black text-slate-900">BookMyVenue</span>
         {currentStep > 0 && (
-          <span className="text-xs font-bold text-slate-500">Step {currentStep} of 5</span>
+          <span className="text-xs font-bold text-slate-500">Step {currentStep} of 4</span>
         )}
         <button
           onClick={() => router.push("/dashboard/owner/venues")}
@@ -257,7 +256,7 @@ export default function NewVenueWizard() {
         {currentStep === 1 && (
           <div className="w-full max-w-3xl space-y-6 animate-fade-in">
             <div className="space-y-1.5">
-              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 1 of 5</span>
+              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 1 of 4</span>
               <h2 className="text-2xl font-bold text-slate-900">What kind of space are you listing?</h2>
               <p className="text-sm text-slate-500">Provide the fundamental details of your space so guests can find it.</p>
             </div>
@@ -361,7 +360,7 @@ export default function NewVenueWizard() {
         {currentStep === 2 && (
           <div className="w-full max-w-3xl space-y-6 animate-fade-in">
             <div className="space-y-1.5">
-              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 2 of 5</span>
+              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 2 of 4</span>
               <h2 className="text-2xl font-bold text-slate-900">Showcase your space with photos</h2>
               <p className="text-sm text-slate-500">Provide clear, bright images to attract potential guests.</p>
             </div>
@@ -434,7 +433,7 @@ export default function NewVenueWizard() {
         {currentStep === 3 && (
           <div className="w-full max-w-3xl space-y-6 animate-fade-in">
             <div className="space-y-1.5">
-              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 3 of 5</span>
+              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 3 of 4</span>
               <h2 className="text-2xl font-bold text-slate-900">What amenities does your space offer?</h2>
               <p className="text-sm text-slate-500">Highlight specifications and equipment to help guests run successful events.</p>
             </div>
@@ -469,82 +468,15 @@ export default function NewVenueWizard() {
           </div>
         )}
 
-        {/* Step 4: Pricing */}
+        {/* Step 4: Review */}
         {currentStep === 4 && (
           <div className="w-full max-w-3xl space-y-6 animate-fade-in">
             <div className="space-y-1.5">
-              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 4 of 5</span>
-              <h2 className="text-2xl font-bold text-slate-900">Configure your booking pricing</h2>
-              <p className="text-sm text-slate-500">Provide flexible daily and hourly rates depending on guest preferences.</p>
-            </div>
-
-            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-soft space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-slate-400">Allowed Booking Mode</label>
-                <select
-                  value={form.allowedModes ?? "BOTH"}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      allowedModes: e.target.value as CreateVenuePayload["allowedModes"],
-                    }))
-                  }
-                  className="w-full h-11 px-3 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                >
-                  <option value="BOTH">Both Daily & Hourly</option>
-                  <option value="DAILY">Daily Booking Only (Airbnb style)</option>
-                  <option value="HOURLY">Hourly Slots Only (BookMyShow style)</option>
-                </select>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                {(form.allowedModes === "DAILY" || form.allowedModes === "BOTH" || !form.allowedModes) && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase text-slate-400">Price per day (₹)</label>
-                    <div className="relative rounded-xl border border-slate-200 bg-white overflow-hidden flex items-center h-11">
-                      <div className="px-3 bg-slate-50 text-slate-400 h-full flex items-center border-r border-slate-200 font-bold text-sm">
-                        ₹
-                      </div>
-                      <Input
-                        type="number"
-                        value={form.pricing}
-                        onChange={(e) => setForm((p) => ({ ...p, pricing: Number(e.target.value) }))}
-                        className="border-none focus-visible:ring-0 shadow-none h-full"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {(form.allowedModes === "HOURLY" || form.allowedModes === "BOTH") && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase text-slate-400">Price per hour (₹)</label>
-                    <div className="relative rounded-xl border border-slate-200 bg-white overflow-hidden flex items-center h-11">
-                      <div className="px-3 bg-slate-50 text-slate-400 h-full flex items-center border-r border-slate-200 font-bold text-sm">
-                        ₹
-                      </div>
-                      <Input
-                        type="number"
-                        value={form.pricePerHour ?? Math.round(form.pricing / 8)}
-                        onChange={(e) => setForm((p) => ({ ...p, pricePerHour: Number(e.target.value) }))}
-                        className="border-none focus-visible:ring-0 shadow-none h-full"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Review */}
-        {currentStep === 5 && (
-          <div className="w-full max-w-3xl space-y-6 animate-fade-in">
-            <div className="space-y-1.5">
-              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 5 of 5</span>
+              <span className="text-xs font-bold text-[#0052ff] uppercase tracking-wide">Step 4 of 4</span>
               <h2 className="text-2xl font-bold text-slate-900">Review your venue listing</h2>
               <p className="text-sm text-slate-500">Double check that all information is correct before publishing your venue.</p>
             </div>
-
+ 
             <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-soft space-y-6">
               <div className="flex gap-4 items-start pb-4 border-b border-slate-50">
                 <div className="h-20 w-24 bg-slate-50 rounded-xl overflow-hidden border border-slate-100 shrink-0">
@@ -568,7 +500,7 @@ export default function NewVenueWizard() {
                   </p>
                 </div>
               </div>
-
+ 
               <div className="grid gap-6 sm:grid-cols-3">
                 <div>
                   <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Venue Type</span>
@@ -585,11 +517,7 @@ export default function NewVenueWizard() {
                 <div>
                   <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pricing</span>
                   <span className="block text-sm font-semibold mt-1 text-slate-800">
-                    {form.allowedModes === "HOURLY"
-                      ? `₹${form.pricePerHour}/hr`
-                      : form.allowedModes === "DAILY"
-                      ? `₹${form.pricing}/day`
-                      : `₹${form.pricing}/day • ₹${form.pricePerHour}/hr`}
+                    Configured in weekly timeslots
                   </span>
                 </div>
               </div>

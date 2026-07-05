@@ -9,8 +9,6 @@ from fastapi import Form
 class Venue(BaseModel):
     name : str 
     address : str
-    price_per_day : Optional[float] = None
-    price_per_hour : Optional[float] = None
     capacity : int | None = None
     booking_allowed_mode : Optional[str] = "BOTH" 
     latitude : Optional[float] = None
@@ -27,8 +25,6 @@ class CreateVenue(Venue):
         cls,
         name: str = Form(...),
         address: str = Form(...),
-        price_per_day : float |None = Form(None),
-        price_per_hour: float | None = Form(None),
         capacity : int = Form(...),
         booking_allowed_mode : str = Form(...),
         latitude: Optional[float] = Form(None),
@@ -38,8 +34,6 @@ class CreateVenue(Venue):
         return cls(
             name=name,
             address=address,
-            price_per_day=price_per_day,
-            price_per_hour = price_per_hour,
             capacity=capacity,
             booking_allowed_mode=booking_allowed_mode,
             latitude=latitude,
@@ -162,6 +156,8 @@ class BusinessHours(BaseModel):
     day_of_week : str
     opens : int
     closes : int
+    price_per_day : Optional[float] = None
+    price_per_hour : Optional[float] = None
 
     class Config:
         from_attributes = True
