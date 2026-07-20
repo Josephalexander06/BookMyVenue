@@ -10,9 +10,12 @@ import type {
 
 const BACKEND_URL = appConfig.apiBaseUrl;
 
-/** Build image URL from backend image_path like "upload/xxxx.jpg" */
+/** Build image URL from backend image_path like "upload/xxxx.jpg" or full URL */
 function buildImageUrl(imagePath: string): string {
-  // Backend serves uploads at /uploads/<filename>
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
+  }
+  // Backend serves uploads at /upload/<filename>
   const filename = imagePath.replace(/^upload\//, "");
   return `${BACKEND_URL}/upload/${filename}`;
 }

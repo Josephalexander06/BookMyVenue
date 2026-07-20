@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
-from backend.routers import booking,users,venue
-from backend.utils.db_helper import Base, engine
+from routers import booking,users,venue
+from utils.db_helper import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -35,7 +35,7 @@ app.include_router(users.router)
 app.include_router(venue.router)
 # app.include_router(google_auth.router)
 
-app.mount("/upload",StaticFiles(directory="/home/joseph/Project/BookMyVenue/backend/upload"),name="upload")
+app.mount("/upload",StaticFiles(directory="/app/upload"),name="upload")
 
 
 @app.get("/")

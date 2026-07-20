@@ -3,7 +3,7 @@ export const appConfig = {
   description:
     "Community-driven marketplace for discovering and booking local venues.",
   apiBaseUrl:
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8001",
   razorpayKey:
     process.env.NEXT_PUBLIC_RAZORPAY_KEY ?? "rzp_test_T1oDR115vwfmJo",
 };

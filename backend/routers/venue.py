@@ -1,16 +1,15 @@
 import os
 from uuid_extensions import uuid7
 from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
-from backend.utils.db_helper import get_db
-from backend.utils.schema import CreateVenue, GetVenue, BusinessHours, GetMyVenue
-from backend import models
+from utils.db_helper import get_db
+from utils.schema import CreateVenue, GetVenue, BusinessHours, GetMyVenue
+import models
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from backend.routers.users import access_required
 import requests
 from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_Distance
 from sqlalchemy import func
-from backend.routers.auth import get_current_user
+from routers.auth import get_current_user
 from .users import admin_required,access_required
 
 router = APIRouter(
@@ -113,6 +112,10 @@ async def get_myvenue(db:Session=Depends(get_db),current_user : int = Depends(ge
     for venue in venues:
         slots_count = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == venue.id).count()
         venue.timeslots_setup_completed = slots_count > 0
+        slot = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == venue.id).first()
+        if slot:
+            venue.price_per_day = slot.price_per_day
+            venue.price_per_hour = slot.price_per_hour
 
     return venues
 
@@ -127,8 +130,6 @@ async def search_venues(search:Optional[str] = Query(None), type:Optional[str] =
         query = query.filter(func.lower(models.Venue.type) == type.lower())
 
     if search is not None:        
-        # processed_query = " & ".join(f"{word}:*" for word in q.split())
-        # venues  = db.query(models.Venue).filter(models.Venue.search_vector.match(processed_query,postgresql_regconfig="english")).all()
 
         coord = geocode(search)
         if "error" in coord:
@@ -144,6 +145,10 @@ async def search_venues(search:Optional[str] = Query(None), type:Optional[str] =
     venues = query.all()
     for n in venues:
         if n.status == "APPROVED":
+            slot = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == n.id).first()
+            if slot:
+                n.price_per_day = slot.price_per_day
+                n.price_per_hour = slot.price_per_hour
             result.append(n)
 
     return result
@@ -153,13 +158,17 @@ async def search_venues(search:Optional[str] = Query(None), type:Optional[str] =
 @router.get("/admin/list",status_code=status.HTTP_200_OK,response_model=List[GetMyVenue])
 def get_admin_venues(db:Session = Depends(get_db),current_user:int = Depends(admin_required)):
     venues = db.query(models.Venue).all()
+    for venue in venues:
+        slot = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == venue.id).first()
+        if slot:
+            venue.price_per_day = slot.price_per_day
+            venue.price_per_hour = slot.price_per_hour
     return venues
 
 
 
 @router.get("/{id}",status_code=status.HTTP_200_OK,response_model=GetVenue)
 async def search_venue_id(id:int,db: Session = Depends(get_db)):
-    # print(id)
 
     venue = db.query(models.Venue).filter(models.Venue.id == id).first()
     if not venue:
@@ -177,6 +186,11 @@ async def search_venue_id(id:int,db: Session = Depends(get_db)):
     
     slots_count = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == venue.id).count()
     venue.timeslots_setup_completed = slots_count > 0
+
+    slot = db.query(models.TimeSlot).filter(models.TimeSlot.venue_id == venue.id).first()
+    if slot:
+        venue.price_per_day = slot.price_per_day
+        venue.price_per_hour = slot.price_per_hour
     
     return  venue
 
@@ -209,7 +223,7 @@ async def update_venue(id:int,updated_data:CreateVenue,db:Session=Depends(get_db
             venue_data['latitude'] = exiting_v.latitude
             venue_data['longitude'] = exiting_v.longitude
 
-    venue_data['search_vector'] = func.to_tsvector('english', updated_data.name + ' ' + updated_data.address)
+    # venue_data['search_vector'] = func.to_tsvector('english', updated_data.name + ' ' + updated_data.address)
     venue_data['location'] = f"POINT({venue_data['longitude']} {venue_data['latitude']})"
     fetch_venue.update(venue_data,synchronize_session=False)
     db.commit()

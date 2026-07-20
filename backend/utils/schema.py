@@ -14,6 +14,8 @@ class Venue(BaseModel):
     latitude : Optional[float] = None
     longitude : Optional[float] = None
     type : str
+    price_per_day : Optional[float] = None
+    price_per_hour : Optional[float] = None
 
     class Config:
         from_attributes = True
@@ -30,6 +32,8 @@ class CreateVenue(Venue):
         latitude: Optional[float] = Form(None),
         longitude: Optional[float] = Form(None),
         type : str = Form(...),
+        price_per_day: Optional[float] = Form(None),
+        price_per_hour: Optional[float] = Form(None),
     ):
         return cls(
             name=name,
@@ -38,8 +42,9 @@ class CreateVenue(Venue):
             booking_allowed_mode=booking_allowed_mode,
             latitude=latitude,
             longitude=longitude,
-            type = type,
-
+            type=type,
+            price_per_day=price_per_day,
+            price_per_hour=price_per_hour,
         )
 class VenueImage(BaseModel):
     id : int

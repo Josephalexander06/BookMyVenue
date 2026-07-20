@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Sparkles, MapPin, Calendar, Users, Star, CheckCircle, CreditCard } from "lucide-react";
+import { ArrowRight, Sparkles, MapPin, Calendar, Users, Star, CheckCircle, CreditCard, AlertCircle } from "lucide-react";
 import { BookingCard } from "@/components/marketplace/booking-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBookings } from "@/features/bookings/hooks";
 import { summarizeBookings } from "@/features/dashboard/hooks";
 import { useVenues } from "@/features/venues/hooks";
+import { useUserProfile } from "@/features/auth/hooks";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { useAuthStore } from "@/store/auth-store";
 import { ClientDate } from "@/components/ui/client-date";
@@ -43,6 +44,7 @@ function DashboardSkeleton() {
 export default function CustomerDashboardPage() {
   const { data: bookingsData, isLoading: loadingBookings } = useBookings();
   const { data: venuesData, isLoading: loadingVenues } = useVenues();
+  const { data: profile } = useUserProfile();
   const { user } = useAuthStore();
 
   const isLoading = loadingBookings || loadingVenues;
@@ -59,6 +61,16 @@ export default function CustomerDashboardPage() {
   const greeting =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
+  // Check if profile is complete (firstName and lastName provided)
+  const isProfileComplete = Boolean(profile?.firstName && profile?.lastName);
+  const displayName = isProfileComplete
+    ? `${profile!.firstName} ${profile!.lastName}`
+    : "Guest";
+
+  const avatarInitials = isProfileComplete
+    ? `${profile!.firstName[0]}${profile!.lastName[0]}`.toUpperCase()
+    : "G";
+
   // Find next upcoming confirmed booking
   const nextBooking = bookings
     .filter((b) => b.status === "approved" && new Date(b.date) >= new Date())
@@ -73,7 +85,7 @@ export default function CustomerDashboardPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              {greeting}, {user?.name ?? "Explorer"} ✨
+              {greeting}, {displayName} ✨
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               Manage your spaces and trace your upcoming reservations.
@@ -95,21 +107,27 @@ export default function CustomerDashboardPage() {
           <div className="md:col-span-2 bg-white border border-slate-100 rounded-2xl p-6 shadow-soft relative overflow-hidden flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <div className="absolute -top-20 -right-20 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
             <div className="h-24 w-24 rounded-2xl bg-gradient-to-tr from-blue-500 to-[#0052ff] text-white flex items-center justify-center font-black text-3xl shadow-md shrink-0 border border-blue-100">
-              {(user?.name ?? "U").substring(0, 2).toUpperCase()}
+              {avatarInitials}
             </div>
             <div className="flex-grow text-center sm:text-left space-y-4">
               <div>
-                <h2 className="text-xl font-extrabold text-slate-900">{user?.name ?? "Alex Morgan"}</h2>
+                <h2 className="text-xl font-extrabold text-slate-900">{displayName}</h2>
                 <p className="text-xs font-semibold text-slate-400 mt-1 flex items-center justify-center sm:justify-start gap-1">
-                  <MapPin className="h-3.5 w-3.5" /> {user?.phone ?? "No location provided"}
+                  <MapPin className="h-3.5 w-3.5" /> {user?.phone ?? "No phone provided"}
                 </p>
               </div>
               <div className="flex flex-wrap justify-center sm:justify-start gap-4">
                 <div className="bg-slate-50 border border-slate-100/50 px-4 py-2 rounded-xl text-left">
-                  <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Verified Account</p>
-                  <p className="text-xs font-bold text-slate-800 flex items-center gap-1 mt-0.5">
-                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500" /> Active Member
-                  </p>
+                  <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Account Status</p>
+                  {isProfileComplete ? (
+                    <p className="text-xs font-bold text-slate-800 flex items-center gap-1 mt-0.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-emerald-500" /> Complete Profile
+                    </p>
+                  ) : (
+                    <Link href="/dashboard/customer/profile" className="text-xs font-bold text-amber-600 flex items-center gap-1 mt-0.5 hover:underline">
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-500" /> Complete Profile
+                    </Link>
+                  )}
                 </div>
                 <div className="bg-slate-50 border border-slate-100/50 px-4 py-2 rounded-xl text-left">
                   <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Total Bookings</p>

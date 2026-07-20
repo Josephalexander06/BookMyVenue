@@ -1,19 +1,16 @@
 from fastapi import Depends,APIRouter,status, HTTPException
-from backend.routers.auth import get_current_user
-from backend.utils.db_helper import get_db
+from routers.auth import get_current_user
+from utils.db_helper import get_db
 from sqlalchemy.orm import Session
-from backend.utils.schema import Bookings, Booking_Owner, OrderCreate, PayemntVerification, Ratings
-from backend.models import Booking, Venue, User, Transactions, Rating, TimeSlot
-from pydantic import field_validator
-from backend.routers.users import access_required,admin_required
+from utils.schema import Bookings, Booking_Owner, OrderCreate, PayemntVerification, Ratings
+from models import Booking, Venue, User, Transactions, Rating, TimeSlot
+from routers.users import access_required,admin_required
 from datetime import date,datetime,time
 from zoneinfo import ZoneInfo
 import razorpay
 import hmac
 import hashlib
-from backend.utils.config import settings
-from typing import List, Optional
-from sqlalchemy import func
+from utils.db_helper import get_settings
 
 
 
@@ -25,7 +22,8 @@ router = APIRouter(
 
 ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
 
-client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY,settings.RAZORPAY_SECRET_KEY))
+settings = get_settings()
+client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_SECRET_KEY))
 
 @router.post("/",status_code=status.HTTP_201_CREATED,response_model=Bookings)
 def create_booking(book:Bookings,db:Session = Depends(get_db),current_user : int = Depends(get_current_user)):

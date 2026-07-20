@@ -1,13 +1,11 @@
 from fastapi import Depends,status,HTTPException,APIRouter
-from backend.utils.db_helper import get_db
-from backend.utils.schema import CreateUser,OTP, Profile
-from backend.utils.config import settings
-from backend.models import OTPVerification,User, Owner
+from utils.db_helper import get_db, get_settings
+from utils.schema import CreateUser,OTP, Profile
+from models import OTPVerification,User, Owner
 from sqlalchemy.orm import Session
 from jose import jwt
-from backend.routers.auth  import get_current_user
+from routers.auth  import get_current_user
 from datetime import datetime,timedelta
-from passlib.context import CryptContext
 import random
 from zoneinfo import ZoneInfo
 from pwdlib import PasswordHash
@@ -18,6 +16,8 @@ router = APIRouter(
     prefix="/user",
     tags=["User"]
 )
+
+settings = get_settings()
 
 # pwd_content = CryptContext(schemes=["bcrypt"],deprecated ="auto")
 pwd_context = PasswordHash.recommended()

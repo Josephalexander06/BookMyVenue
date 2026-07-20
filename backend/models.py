@@ -1,4 +1,4 @@
-from backend.utils.db_helper import Base
+from utils.db_helper import Base
 from sqlalchemy import Column,Integer,TIMESTAMP,String,Float,Boolean,text,DateTime, ForeignKey, DECIMAL
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import TSVECTOR
@@ -18,7 +18,7 @@ class Venue(Base):
     availability = Column(Boolean,server_default='TRUE')
     created_at = Column(TIMESTAMP(timezone=True),server_default=text('now()')) 
     owner_id = Column(Integer,ForeignKey("users.id", ondelete="CASCADE"),nullable=False)
-    search_vector  = Column(TSVECTOR,nullable=False)
+    search_vector  = Column(TSVECTOR,nullable=True)
     location = Column(Geography("POINT",srid=4326))
     type = Column(String,nullable=False)
     status = Column(String,default="PENDING")
