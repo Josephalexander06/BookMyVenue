@@ -920,10 +920,10 @@ export default function BookingPage() {
       </div>
 
       {/* Main Split Layout */}
-      <div className="mx-auto w-full max-w-5xl px-6 grid gap-8 md:grid-cols-[1.4fr_1fr]">
+      <div className="mx-auto w-full max-w-5xl px-6 grid gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         
         {/* Left Column: Form */}
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 sm:p-8 shadow-soft">
+        <div className="min-w-0 bg-white border border-slate-100 rounded-3xl p-6 sm:p-8 shadow-soft">
           <form onSubmit={handleSubmit} className="space-y-8">
             
             {/* Booking Mode Selector (Only shown if venue allows BOTH) */}
@@ -1261,7 +1261,7 @@ export default function BookingPage() {
         </div>
 
         {/* Right Column: Invoice/Summary Card */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-soft space-y-6">
             
             {/* Mini Venue visual */}
