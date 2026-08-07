@@ -69,6 +69,7 @@ const bookingDate = new Date(booking.date);
 bookingDate.setHours(0, 0, 0, 0);
 
 const isPastDate = bookingDate < today;
+const canRate = booking.status === "approved" && isPastDate;
 
   return (
     <div className="group rounded-xl border border-slate-100 bg-white p-4 transition-all duration-200 hover:border-slate-200 hover:shadow-soft flex gap-4">
@@ -161,7 +162,7 @@ const isPastDate = bookingDate < today;
           )}
         </div>
 
-        {booking.status === "approved" && (
+        {canRate && (
           <div className="mt-2.5 pt-2 border-t border-slate-50 flex items-center gap-1.5 animate-fade-in">
             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Rate:</span>
             <div className="flex items-center">

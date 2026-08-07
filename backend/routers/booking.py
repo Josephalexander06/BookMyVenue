@@ -285,6 +285,14 @@ def create_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tupl
     if not booking :
         raise HTTPException(status_code=404,detail="No booking found")
 
+    booking_day = booking.booking_date.date() if isinstance(booking.booking_date, datetime) else booking.booking_date
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+    if booking.status != "APPROVED" or booking_day is None or booking_day >= today:
+        raise HTTPException(
+            status_code=400,
+            detail="Ratings are available only after an approved booking date has passed",
+        )
+
 
     rate = db.query(Rating).filter(Rating.booking_id == booking_id).first()
 
@@ -302,24 +310,3 @@ def create_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tupl
     db.commit()
 
     return {"msg":"rating set"}
-
-# @router.patch("/rating")
-# def update_rating(rating:Ratings,db:Session = Depends(get_db),current_user: tuple = Depends(get_current_user)):
-
-#     booking_id = int(rating.id)
-
-#     booking = db.query(Booking).filter(
-#         Booking.id == booking_id,
-#         Booking.user_id == current_user[0]
-#     ).first()
-    
-#     if not booking :
-#         raise HTTPException(status_code=404,detail="No booking found")
-
-#     rating_update = db.query(Rating).filter(Rating.booking_id == booking.id).first()
-
-#     rating_update.ratings = rating.ratings 
-
-#     db.commit()
-#     return {"updated"}
-    
