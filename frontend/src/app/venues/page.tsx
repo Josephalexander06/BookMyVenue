@@ -31,33 +31,48 @@ export default function VenuesPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const searchParam = params.get("search");
-      const typeParam = params.get("type");
-      if (searchParam || typeParam) {
+      const syncFromUrl = () => {
+        const params = new URLSearchParams(window.location.search);
+        const searchParam = params.get("search");
+        const typeParam = params.get("type");
         setFilters((prev) => ({
           ...prev,
-          search: searchParam ?? prev.search,
-          type: (typeParam as any) ?? prev.type,
+          search: searchParam ?? "",
+          type: (typeParam as any) ?? prev.type ?? "all",
         }));
-      }
+      };
+
+      syncFromUrl();
+      window.addEventListener("popstate", syncFromUrl);
+      return () => window.removeEventListener("popstate", syncFromUrl);
     }
   }, []);
+
+  const handleSearchChange = (val: string) => {
+    setFilters((prev) => ({ ...prev, search: val, page: 1 }));
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (val.trim()) {
+        params.set("search", val);
+      } else {
+        params.delete("search");
+      }
+      const queryString = params.toString();
+      const newUrl = queryString ? `/venues?${queryString}` : "/venues";
+      window.history.replaceState(null, "", newUrl);
+    }
+  };
 
   const { data, isLoading, isError } = useVenues(filters);
 
   const rows = useMemo(() => {
     const baseItems = data?.items ?? [];
     return baseItems.filter((venue) => {
-      const matchesSearch = true;
-      const matchesLocation = filters.location
-        ? venue.location.toLowerCase().includes(filters.location.toLowerCase())
-        : true;
       const matchesType = filters.type && filters.type !== "all" ? venue.type === filters.type : true;
       const matchesCapacity = filters.minCapacity ? venue.capacity >= filters.minCapacity : true;
-      return matchesSearch && matchesLocation && matchesType && matchesCapacity;
+      return matchesType && matchesCapacity;
     });
-  }, [data?.items, filters]);
+  }, [data?.items, filters.type, filters.minCapacity]);
 
   const total = rows.length;
 
@@ -92,9 +107,9 @@ export default function VenuesPage() {
             <MapPin className="h-4 w-4 text-[#0052ff] shrink-0" />
             <input
               type="text"
-              placeholder="Search by city or address..."
+              placeholder="Search keyword, venue name or location..."
               value={filters.search ?? ""}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="text-xs font-bold text-slate-700 placeholder-slate-400 outline-none bg-transparent w-full sm:w-64"
             />
           </div>

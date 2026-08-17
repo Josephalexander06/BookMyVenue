@@ -62,7 +62,7 @@ const toQuery = (filters: (VenueFilters & { ownerOnly?: boolean }) = {}) => {
 export async function getVenues(
   filters?: VenueFilters & { ownerOnly?: boolean }
 ): Promise<VenueListResponse> {
-  let endpoint = "/venues";
+  let endpoint = "/venues/";
   let query = "";
 
   if (filters?.ownerOnly) {

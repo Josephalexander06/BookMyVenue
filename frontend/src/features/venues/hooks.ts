@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createVenue,
@@ -18,10 +19,49 @@ import {
 } from "@/features/venues/api";
 import type { CreateVenuePayload, VenueFilters } from "@/types/venue";
 
+/**
+ * Debounces only the search term so that the API request only fires
+ * after the user stops typing for `delay` ms.
+ * Other filter changes (type, page) take effect immediately.
+ */
 export function useVenues(filters?: VenueFilters & { ownerOnly?: boolean }) {
+  const rawSearch = filters?.search ?? "";
+  const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Clear any pending timer
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    // If clearing the search box, update immediately (no delay)
+    if (!rawSearch.trim()) {
+      setDebouncedSearch("");
+      return;
+    }
+
+    // Otherwise debounce
+    timerRef.current = setTimeout(() => {
+      setDebouncedSearch(rawSearch);
+    }, 500);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [rawSearch]);
+
+  // Build a stable query key that only uses the debounced search
+  const page = filters?.page ?? 1;
+  const pageSize = filters?.pageSize ?? 16;
+  const type = filters?.type ?? "all";
+  const ownerOnly = filters?.ownerOnly ?? false;
+
   return useQuery({
-    queryKey: ["venues", filters],
-    queryFn: () => getVenues(filters),
+    queryKey: ["venues", { search: debouncedSearch, type, page, pageSize, ownerOnly }],
+    queryFn: () =>
+      getVenues({
+        ...filters,
+        search: debouncedSearch,
+      }),
   });
 }
 

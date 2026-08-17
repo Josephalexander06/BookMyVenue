@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from uuid_extensions import uuid7
 from fastapi import Depends,status,HTTPException,Response,APIRouter, Query,UploadFile,File
 from utils.db_helper import get_db
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import requests
 from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_Distance
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from routers.auth import get_current_user
 from .users import admin_required,access_required
 
@@ -17,7 +18,6 @@ router = APIRouter(
     tags=["Venue"]
 )
 
-# Absolute upload directory path to avoid working directory mismatches
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(BACKEND_DIR, "upload")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -31,7 +31,6 @@ async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:
     new_venue = models.Venue(**venue_data)
     new_venue.owner_id = current_user[0]
 
-    # Use coordinates if provided by client, otherwise geocode address
     if Venues.latitude is not None and Venues.longitude is not None:
         new_venue.latitude = Venues.latitude
         new_venue.longitude = Venues.longitude
@@ -74,34 +73,37 @@ async def create_venue(Venues:CreateVenue = Depends(CreateVenue.as_form),images:
 
     return [new_venue]
 
+@lru_cache(maxsize=256)
 def geocode(address:str):
+    clean_addr = address.strip().lower() if address else ""
+    if len(clean_addr) < 3:
+        return {"error": "query too short"}
 
     url  = "https://nominatim.openstreetmap.org/search"
-
     headers = {
         "User-Agent": "Bookmyvenue/1.0" 
     }
     
-    query = address
-    if "kerala" not in query.lower():
+    query = clean_addr
+    if "kerala" not in query:
         query = f"{query}, Kerala"
 
     params = {
-        "q":query,
+        "q": query,
         "format" : "json",
         "limit" : 1,
         "countrycodes": "in"
-       }
+    }
     
-    response  = requests.get(url,params=params,headers=headers)
-    response.raise_for_status()
-
-    data = response.json()
-
-    if not data:
-        return{"error":"address not found"}
-
-    return {"latitude":float(data[0]["lat"]),"longitude":float(data[0]["lon"])}
+    try:
+        response  = requests.get(url, params=params, headers=headers, timeout=2.0)
+        response.raise_for_status()
+        data = response.json()
+        if not data:
+            return {"error":"address not found"}
+        return {"latitude":float(data[0]["lat"]),"longitude":float(data[0]["lon"])}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @router.get("/Venue",status_code=status.HTTP_200_OK,response_model=List[GetMyVenue])
@@ -126,21 +128,49 @@ async def search_venues(search:Optional[str] = Query(None), type:Optional[str] =
     result = []
     query = db.query(models.Venue)
 
-    if type is not None:
-        query = query.filter(func.lower(models.Venue.type) == type.lower())
+    if type is not None and type.lower() != "all":
+        query = query.filter(func.trim(func.lower(models.Venue.type)) == type.lower())
 
-    if search is not None:        
+    if search is not None and search.strip():
+        clean_search = search.strip()
+        term = f"%{clean_search}%"
 
-        coord = geocode(search)
-        if "error" in coord:
-            return []
-
-        search_point = func.ST_GeogFromText(
-            f"POINT({coord["longitude"]} {coord["latitude"]})"
+        # Text condition: match name, address, or type
+        text_condition = or_(
+            models.Venue.name.ilike(term),
+            models.Venue.address.ilike(term),
+            func.trim(func.lower(models.Venue.type)).ilike(term)
         )
-                
-        query = query.filter(func.ST_DWithin(models.Venue.location,search_point,20000)).order_by(func.ST_Distance(models.Venue.location,search_point))
-    
+
+        # Step 1: Check if text matches any APPROVED venue
+        text_match_count = db.query(models.Venue).filter(
+            text_condition, models.Venue.status == "APPROVED"
+        ).count()
+
+        if text_match_count > 0:
+            # TEXT/KEYWORD SEARCH: found venues by name/address/type — use those
+            query = query.filter(text_condition)
+        else:
+            # Step 2: No text matches — try geocoding for location-based search
+            geocode_result = None
+            try:
+                geocode_result = geocode(clean_search)
+                if "error" in geocode_result:
+                    geocode_result = None
+            except Exception:
+                geocode_result = None
+
+            if geocode_result:
+                # LOCATION SEARCH: find venues within 30km, ordered by distance
+                search_point = func.ST_GeogFromText(
+                    f"POINT({geocode_result['longitude']} {geocode_result['latitude']})"
+                )
+                query = query.filter(
+                    func.ST_DWithin(models.Venue.location, search_point, 30000)
+                ).order_by(func.ST_Distance(models.Venue.location, search_point))
+            else:
+                # Nothing matched at all
+                query = query.filter(text_condition)
 
     venues = query.all()
     for n in venues:
@@ -208,18 +238,15 @@ async def update_venue(id:int,updated_data:CreateVenue,db:Session=Depends(get_db
     if venue_data.get('latitude') is not None and venue_data.get('longitude') is not None:
         pass
     else:
-        # If coordinates are not provided, only try to geocode if the address actually changed
         if exiting_v.address != updated_data.address:
             coords = geocode(updated_data.address)
             if "error" not in coords:
                 venue_data['latitude'] = coords["latitude"]
                 venue_data['longitude'] = coords["longitude"]
             else:
-                # If geocoding fails, fallback to existing coordinates to avoid DB null constraint violations
                 venue_data['latitude'] = exiting_v.latitude
                 venue_data['longitude'] = exiting_v.longitude
         else:
-            # Preserve existing coordinates
             venue_data['latitude'] = exiting_v.latitude
             venue_data['longitude'] = exiting_v.longitude
 

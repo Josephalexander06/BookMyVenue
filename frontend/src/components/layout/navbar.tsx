@@ -103,14 +103,33 @@ function NavbarInner() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  /* Sync searchQuery state from URL search parameter */
+  useEffect(() => {
+    const currentSearch = searchParams.get("search") || "";
+    setSearchQuery(currentSearch);
+  }, [searchParams]);
+
   const dashboardRoute = user ? roleRoutes[user.role as UserRole] : "/";
   const activeType = searchParams.get("type") ?? "";
   const showCategoryRow = false;
 
   /* Handlers */
-  function handleSearch(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && searchQuery.trim()) {
-      router.push(`/venues?search=${encodeURIComponent(searchQuery.trim())}`);
+  function handleLiveSearch(val: string) {
+    setSearchQuery(val);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (val.trim()) {
+        params.set("search", val);
+      } else {
+        params.delete("search");
+      }
+      const queryString = params.toString();
+      const targetUrl = queryString ? `/venues?${queryString}` : "/venues";
+      if (pathname === "/venues") {
+        window.history.replaceState(null, "", targetUrl);
+      } else if (val.trim()) {
+        router.push(targetUrl);
+      }
     }
   }
 
@@ -155,10 +174,9 @@ function NavbarInner() {
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40 transition-colors group-focus-within:text-white/70" />
                 <input
                   type="text"
-                  placeholder="Search for venues, spaces and events"
+                  placeholder="Search for venues, spaces and keywords..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleSearch}
+                  onChange={(e) => handleLiveSearch(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
                   className="w-full rounded-full border border-white/10 bg-white/10 py-2 pl-10 pr-4 text-sm text-white placeholder-white/40 outline-none backdrop-blur-sm transition-all duration-300 focus:border-white/25 focus:bg-white/[0.14] focus:ring-1 focus:ring-white/10"
